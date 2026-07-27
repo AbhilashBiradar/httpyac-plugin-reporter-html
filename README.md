@@ -96,19 +96,62 @@ module.exports = {
 
 ## CI/CD Usage
 
-The report is written progressively after each request — so even if a run is interrupted, you get a partial report. Add it to your pipeline:
+The report is written progressively after each request — so even if a run is interrupted, you get a partial report.
+
+### GitHub Actions — complete example
+
+Create `.github/workflows/api-tests.yml` in your project:
 
 ```yaml
-# GitHub Actions example
-- name: Run HTTP tests
-  run: httpyac send **/*.http --all
+name: API Tests
 
-- name: Upload report
-  uses: actions/upload-artifact@v4
-  with:
-    name: http-test-report
-    path: report.html
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install httpYac CLI
+        run: npm install -g httpyac
+
+      - name: Run HTTP tests
+        run: httpyac send **/*.http --all
+        # continues even if some assertions fail — we still want the report
+        continue-on-error: true
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        if: always()   # upload even if tests failed
+        with:
+          name: http-test-report
+          path: report.html
+          retention-days: 30
 ```
+
+After each run, the report is available under **Actions → your run → Artifacts → http-test-report**.
+
+### Tips
+
+- `continue-on-error: true` ensures the upload step always runs even when assertions fail
+- `if: always()` on the upload guarantees the report is saved regardless of job outcome
+- Increase `retention-days` (max 90) if you want to keep reports longer for auditing
 
 ---
 
