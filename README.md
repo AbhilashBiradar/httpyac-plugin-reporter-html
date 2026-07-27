@@ -1,6 +1,12 @@
 # httpyac-plugin-reporter-html
 
-A zero-dependency [httpYac](https://httpyac.github.io/) plugin that intercepts every HTTP request/response in a test run and generates a single, standalone HTML report file — no external CSS/JS, works offline and in CI/CD environments.
+> A zero-dependency [httpYac](https://httpyac.github.io/) plugin that generates a single, standalone HTML report for your entire HTTP test run — works offline, perfect for CI/CD.
+
+[![npm version](https://img.shields.io/npm/v/httpyac-plugin-reporter-html)](https://www.npmjs.com/package/httpyac-plugin-reporter-html)
+[![license](https://img.shields.io/npm/l/httpyac-plugin-reporter-html)](./LICENSE)
+[![node](https://img.shields.io/node/v/httpyac-plugin-reporter-html)](https://nodejs.org)
+
+---
 
 ## Preview
 
@@ -12,39 +18,41 @@ A zero-dependency [httpYac](https://httpyac.github.io/) plugin that intercepts e
 
 ## Features
 
-- **Summary hero** — total requests, passed, failed, and total duration at a glance
-- **Per-request cards** — color-coded by HTTP status (2xx green, 4xx orange, 5xx red)
-- **Collapsible panels** — request headers, response headers, and pretty-printed JSON response body
-- **Test assertion badges** — pass/fail status for every `@assert` / test block inside a region
-- **Client-side filter & search** — filter by status class or failed tests, search by URL or region name
-- **Single file output** — all CSS and JS is inlined; share the file anywhere
+- **9-stat summary hero** — requests, passed, failed, skipped, duration + test-level totals
+- **Color-coded request cards** — green (2xx), amber (3xx), orange (4xx), red (5xx)
+- **All 4 test statuses** — `SUCCESS` `FAILED` `ERROR` `SKIPPED` badges with full error detail
+- **Collapsible panels** — request headers, request body, response headers, response body (pretty-printed JSON)
+- **Metadata row** — region name, title, description, source file + line, timestamp
+- **Filter & search** — filter by outcome or HTTP status class, search by URL / name / file
+- **Single standalone file** — all CSS and JS inlined, no internet required, share anywhere
+- **Auto-skips non-HTTP regions** — AMQP, MQTT, gRPC, WebSocket regions are excluded
 
 ---
 
 ## Requirements
 
-- Node.js >= 18
-- httpYac >= 6.0.0
+| Dependency | Version |
+|---|---|
+| Node.js | >= 18 |
+| httpYac | >= 6.0.0 |
 
 ---
 
 ## Installation
 
-### Global (recommended for CLI use)
+### Global (CLI use)
 
 ```bash
 npm install -g httpyac-plugin-reporter-html
 ```
 
-httpYac **automatically discovers** any globally installed package whose name matches `httpyac-plugin-*` — no extra config needed.
-
-### Project-local
+### Project-local (recommended)
 
 ```bash
 npm install --save-dev httpyac-plugin-reporter-html
 ```
 
-httpYac scans your `package.json` `dependencies` and `devDependencies` for packages matching `httpyac-plugin-*` and loads them automatically. No registration in config is required.
+> **No configuration needed.** httpYac automatically discovers any installed package whose name matches `httpyac-plugin-*` by scanning your `package.json` dependencies.
 
 ---
 
@@ -56,65 +64,67 @@ Run your `.http` files as normal:
 httpyac send **/*.http
 ```
 
-When the run finishes, `report.html` is written to the project root. Open it in any browser:
+`report.html` is written to your workspace root when the run finishes. Open it:
 
 ```bash
-open report.html          # macOS
-xdg-open report.html      # Linux
-start report.html         # Windows
+open report.html        # macOS
+xdg-open report.html    # Linux
+start report.html       # Windows
 ```
 
 ---
 
 ## Configuration
 
-You can configure the plugin in `.httpyac.config.js` at the project root:
+Add an `htmlReporter` block to `.httpyac.config.js` at your project root:
 
 ```js
 module.exports = {
   htmlReporter: {
-    title: 'My API Test Report',
-    outputFile: 'report.html',
+    title: 'My API Test Report',   // displayed in the report header
+    outputFile: 'report.html',     // path relative to workspace root
   },
 };
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `title` | `string` | `"httpYac HTML Report"` | Title displayed in the report header |
-| `outputFile` | `string` | `"report.html"` | Output file name/path relative to workspace root |
+| `title` | `string` | `"httpYac HTML Report"` | Title shown in the report header |
+| `outputFile` | `string` | `"report.html"` | Output file path relative to workspace root |
 
 ---
 
-## Report Overview
+## CI/CD Usage
 
+The report is written progressively after each request — so even if a run is interrupted, you get a partial report. Add it to your pipeline:
+
+```yaml
+# GitHub Actions example
+- name: Run HTTP tests
+  run: httpyac send **/*.http --all
+
+- name: Upload report
+  uses: actions/upload-artifact@v4
+  with:
+    name: http-test-report
+    path: report.html
 ```
-┌──────────────────────────────────────────────────────┐
-│  httpYac HTML Report          Generated 2025-07-27   │
-├──────────┬──────────┬──────────┬─────────────────────┤
-│  12 Total│  10 Pass │  2 Fail  │  3.45s Duration      │
-├──────────┴──────────┴──────────┴─────────────────────┤
-│  🔍 Search…  [All] [2xx] [4xx] [5xx] [Failed Tests]   │
-├──────────────────────────────────────────────────────┤
-│  GET  /api/users                            200  42ms  │
-│  ├─ Request Headers                                   │
-│  ├─ Response Headers                                  │
-│  └─ Response Body                                     │
-│  POST /api/auth                             401  12ms  │
-│  ...                                                  │
-└──────────────────────────────────────────────────────┘
-```
+
+---
+
+## How it works
+
+httpYac loads plugins automatically from `dependencies` / `devDependencies` matching `httpyac-plugin-*`. This plugin hooks into the `responseLogging` lifecycle event — which fires **after** all `@assert` / test blocks have run — so test results are always fully populated in the report.
 
 ---
 
 ## Contributing
 
 1. Fork the repo
-2. Create a feature branch: `git checkout -b feat/my-feature`
-3. Commit your changes
-4. Open a pull request
+2. Create a branch: `git checkout -b feat/my-feature`
+3. Commit and open a pull request
 
-Bug reports and feature requests are welcome via [GitHub Issues](https://github.com/AbhilashBiradar/httpyac-plugin-reporter-html/issues).
+Bug reports and feature requests → [GitHub Issues](https://github.com/AbhilashBiradar/httpyac-plugin-reporter-html/issues)
 
 ---
 
