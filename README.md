@@ -2,6 +2,12 @@
 
 A zero-dependency [httpYac](https://httpyac.github.io/) plugin that intercepts every HTTP request/response in a test run and generates a single, standalone HTML report file — no external CSS/JS, works offline and in CI/CD environments.
 
+## Preview
+
+![Report overview](https://raw.githubusercontent.com/AbhilashBiradar/httpyac-plugin-reporter-html/main/docs/screenshot-full.png)
+
+![Expanded card with test assertions](https://raw.githubusercontent.com/AbhilashBiradar/httpyac-plugin-reporter-html/main/docs/screenshot-expanded.png)
+
 ---
 
 ## Features
