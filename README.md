@@ -169,6 +169,8 @@ httpYac loads plugins automatically from `dependencies` / `devDependencies` matc
 
 Bug reports and feature requests → [GitHub Issues](https://github.com/AbhilashBiradar/httpyac-plugin-reporter-html/issues)
 
+💬 Questions, ideas, feedback → [GitHub Discussions](https://github.com/AbhilashBiradar/httpyac-plugin-reporter-html/discussions)
+
 ---
 
 ## License
