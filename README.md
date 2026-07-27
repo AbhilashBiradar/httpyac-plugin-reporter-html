@@ -3,7 +3,7 @@
 > A zero-dependency [httpYac](https://httpyac.github.io/) plugin that generates a single, standalone HTML report for your entire HTTP test run — works offline, perfect for CI/CD.
 
 [![npm version](https://img.shields.io/npm/v/httpyac-plugin-reporter-html)](https://www.npmjs.com/package/httpyac-plugin-reporter-html)
-[![license](https://img.shields.io/npm/l/httpyac-plugin-reporter-html)](./LICENSE)
+[![license](https://img.shields.io/github/license/AbhilashBiradar/httpyac-plugin-reporter-html)](./LICENSE)
 [![node](https://img.shields.io/node/v/httpyac-plugin-reporter-html)](https://nodejs.org)
 
 ---
