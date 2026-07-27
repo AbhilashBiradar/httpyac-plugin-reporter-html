@@ -1,0 +1,38 @@
+{
+  "name": "httpyac-plugin-reporter-html",
+  "version": "1.0.0",
+  "description": "httpYac plugin that generates a single standalone HTML report for all HTTP requests and test results",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "src/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js"
+  },
+  "keywords": [
+    "httpyac",
+    "plugin",
+    "reporter",
+    "html",
+    "test-report",
+    "junit",
+    "ci"
+  ],
+  "author": "Abhilash Biradar",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AbhilashBiradar/httpyac-plugin-reporter-html.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AbhilashBiradar/httpyac-plugin-reporter-html/issues"
+  },
+  "homepage": "https://github.com/AbhilashBiradar/httpyac-plugin-reporter-html#readme",
+  "peerDependencies": {
+    "httpyac": ">=6.0.0"
+  }
+}
