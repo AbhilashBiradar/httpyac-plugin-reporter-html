@@ -1,6 +1,6 @@
 {
   "name": "httpyac-plugin-reporter-html",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "httpYac plugin that generates a single standalone HTML report for all HTTP requests and test results",
   "main": "index.js",
   "files": [
