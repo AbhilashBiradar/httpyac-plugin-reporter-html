@@ -4,6 +4,9 @@
 
 [![npm version](https://img.shields.io/npm/v/httpyac-plugin-reporter-html)](https://www.npmjs.com/package/httpyac-plugin-reporter-html)
 [![license](https://img.shields.io/github/license/AbhilashBiradar/httpyac-plugin-reporter-html)](./LICENSE)
+[![demo](https://img.shields.io/badge/live%20demo-GitHub%20Pages-blue)](https://abhilashbiradar.github.io/httpyac-plugin-reporter-html/demo/index.html)
+
+> **[▶ Live Report Demo](https://abhilashbiradar.github.io/httpyac-plugin-reporter-html/demo/index.html)** — See a real generated HTML report from JSONPlaceholder API tests.
 [![node](https://img.shields.io/node/v/httpyac-plugin-reporter-html)](https://nodejs.org)
 
 ---
