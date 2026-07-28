@@ -97,6 +97,21 @@ module.exports = {
 
 ---
 
+## Excluding Requests from the Report
+
+Use httpYac's `# @no-log` metadata to exclude sensitive regions (e.g. token fetch) from the HTML report entirely:
+
+```http
+# @name getToken
+# @no-log
+GET https://auth.example.com/oauth/token
+Authorization: Basic {{clientId}} {{clientSecret}}
+```
+
+Any region marked with `# @no-log` will not appear in the report — the request, response headers, response body, and any tokens are kept out of the output file.
+
+---
+
 ## GitHub Actions
 
 Use the official GitHub Action to run httpYac tests and generate the report in CI — no setup needed:
