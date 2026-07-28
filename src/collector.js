@@ -25,6 +25,9 @@ function collect(response, context) {
   // Skip global (setup/teardown) regions — not meaningful in a request report
   if (region.isGlobal?.()) return null;
 
+  // Respect # @no-log — exclude region from report same as terminal output
+  if (region.metaData?.noLog) return null;
+
   // Skip disabled regions
   if (region.metaData?.disabled) return null;
 
