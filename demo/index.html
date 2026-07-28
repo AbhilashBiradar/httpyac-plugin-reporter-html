@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>httpYac HTML Report</title>
+<style>:root {
+  --bg:#0f172a;--surface:#1e293b;--surface2:#263348;--border:#334155;
+  --text:#e2e8f0;--muted:#94a3b8;--radius:8px;
+  --mono:'Menlo','Consolas',monospace;
+  --c-success:#22c55e;--c-success-bg:#052e16;--c-success-border:#166534;
+  --c-redirect:#f59e0b;--c-redirect-bg:#1c1400;--c-redirect-border:#92400e;
+  --c-ce:#f97316;--c-ce-bg:#1c0a00;--c-ce-border:#9a3412;
+  --c-se:#ef4444;--c-se-bg:#1c0000;--c-se-border:#991b1b;
+  --c-skip:#a78bfa;--c-skip-bg:#1e1040;--c-skip-border:#6d28d9;
+  --c-error:#fb923c;--c-error-bg:#1c0d00;--c-error-border:#9a4f00;
+  --c-unknown:#64748b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;min-height:100vh}
+
+/* ── Header ── */
+.site-header{background:var(--surface);border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.site-header h1{font-size:1.2rem;font-weight:600}
+.generated{font-size:.75rem;color:var(--muted)}
+
+/* ── Hero stats ── */
+.hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;padding:20px 32px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.stat .val{font-size:1.9rem;font-weight:700;line-height:1}
+.stat .lbl{font-size:.68rem;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.06em}
+.stat.s-pass .val{color:var(--c-success)}
+.stat.s-fail .val{color:var(--c-se)}
+.stat.s-skip .val{color:var(--c-skip)}
+.stat.s-dur  .val{font-size:1.3rem}
+
+/* ── Filter bar ── */
+.filter-bar{padding:0 32px 14px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.filter-bar input{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:7px 13px;color:var(--text);font-size:.85rem;width:240px;outline:none}
+.filter-bar input:focus{border-color:var(--muted)}
+.fbtn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px 13px;color:var(--muted);font-size:.76rem;cursor:pointer;transition:all .15s}
+.fbtn:hover,.fbtn.active{background:var(--border);color:var(--text)}
+
+/* ── Cards ── */
+.cards{padding:0 32px 40px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card.hidden{display:none}
+
+.card-header{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;user-select:none;transition:background .15s}
+.card-header:hover{background:rgba(255,255,255,.04)}
+
+/* left colour bar */
+.hbar{width:4px;height:28px;border-radius:2px;flex-shrink:0}
+.hbar-success{background:var(--c-success)}
+.hbar-redirect{background:var(--c-redirect)}
+.hbar-client-error{background:var(--c-ce)}
+.hbar-server-error{background:var(--c-se)}
+.hbar-unknown{background:var(--c-unknown)}
+
+.method{font-family:var(--mono);font-size:.72rem;font-weight:700;background:var(--border);padding:3px 7px;border-radius:4px;flex-shrink:0}
+.url{font-family:var(--mono);font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.status-code{font-family:var(--mono);font-size:.82rem;font-weight:600;flex-shrink:0}
+.sc-success{color:var(--c-success)}.sc-redirect{color:var(--c-redirect)}
+.sc-client-error{color:var(--c-ce)}.sc-server-error{color:var(--c-se)}.sc-unknown{color:var(--c-unknown)}
+.duration{font-size:.72rem;color:var(--muted);flex-shrink:0}
+.chevron{color:var(--muted);flex-shrink:0;transition:transform .2s}
+.card.open .chevron{transform:rotate(180deg)}
+
+/* outcome dot */
+.outcome-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-passed{background:var(--c-success)}
+.dot-failed{background:var(--c-se)}
+.dot-error{background:var(--c-error)}
+.dot-skipped{background:var(--c-skip)}
+
+/* ── Card body ── */
+.card-body{display:none;border-top:1px solid var(--border);padding:16px}
+.card.open .card-body{display:block}
+
+.region-name{font-size:.8rem;color:var(--text);margin-bottom:8px;font-family:var(--mono);font-weight:600}
+
+/* meta row: title / description / file:line / timestamp */
+.meta-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;align-items:center}
+.meta-title{font-size:.75rem;font-weight:600;color:var(--text)}
+.meta-desc{font-size:.75rem;color:var(--muted);font-style:italic}
+.meta-file{font-family:var(--mono);font-size:.72rem;background:var(--border);padding:2px 7px;border-radius:4px;color:var(--muted)}
+.meta-ts{font-size:.7rem;color:var(--muted);margin-left:auto}
+
+.no-tests{font-size:.75rem;color:var(--muted);margin-bottom:12px}
+.test-results{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.badge{font-size:.72rem;padding:3px 9px;border-radius:20px;font-weight:500;cursor:default}
+.badge-pass {background:var(--c-success-bg);color:var(--c-success);border:1px solid var(--c-success-border)}
+.badge-fail {background:var(--c-se-bg);color:var(--c-se);border:1px solid var(--c-se-border)}
+.badge-error{background:var(--c-error-bg);color:var(--c-error);border:1px solid var(--c-error-border)}
+.badge-skip {background:var(--c-skip-bg);color:var(--c-skip);border:1px solid var(--c-skip-border)}
+
+/* ── Collapsible panels ── */
+.panels{display:flex;flex-direction:column;gap:7px}
+details{background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+summary{padding:9px 13px;cursor:pointer;font-size:.8rem;color:var(--muted);user-select:none;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▶ ';font-size:.65rem}
+details[open] summary::before{content:'▼ '}
+summary:hover{color:var(--text)}
+details[open] summary{border-bottom:1px solid var(--border)}
+
+.header-table{width:100%;border-collapse:collapse;font-size:.75rem;font-family:var(--mono)}
+.header-table td{padding:5px 13px;border-bottom:1px solid var(--border);vertical-align:top}
+.header-table td.hk{color:var(--muted);white-space:nowrap;width:34%}
+.header-table td.empty{color:var(--muted);font-style:italic}
+.header-table tr:last-child td{border-bottom:none}
+
+.body-pre{padding:11px 13px;font-size:.75rem;font-family:var(--mono);overflow-x:auto;white-space:pre-wrap;word-break:break-all;color:var(--text);max-height:400px;overflow-y:auto}
+
+@media(max-width:640px){
+  .hero,.filter-bar,.cards{padding-left:14px;padding-right:14px}
+  .url{display:none}
+  .meta-ts{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>httpYac HTML Report</h1>
+  <span class="generated">Generated 2026-07-27T15:01:54.769Z</span>
+</header>
+
+<section class="hero">
+  <div class="stat">         <div class="val">10</div>         <div class="lbl">Requests</div></div>
+  <div class="stat s-pass">  <div class="val">9</div>   <div class="lbl">Passed</div></div>
+  <div class="stat s-fail">  <div class="val">1</div>   <div class="lbl">Failed / Error</div></div>
+  <div class="stat s-skip">  <div class="val">0</div>  <div class="lbl">Skipped</div></div>
+  <div class="stat s-dur">   <div class="val">30.84s</div><div class="lbl">Duration</div></div>
+  <div class="stat">         <div class="val">22</div>     <div class="lbl">Total Tests</div></div>
+  <div class="stat s-pass">  <div class="val">21</div>   <div class="lbl">Tests Passed</div></div>
+  <div class="stat s-fail">  <div class="val">1</div>   <div class="lbl">Tests Failed</div></div>
+  <div class="stat s-skip">  <div class="val">0</div>  <div class="lbl">Tests Skipped</div></div>
+</section>
+
+<div class="filter-bar">
+  <input type="search" id="search" placeholder="Search URL, name, file…" oninput="applyFilters()"/>
+  <button class="fbtn active" onclick="setFilter('all',this)">All</button>
+  <button class="fbtn" onclick="setFilter('passed',this)">Passed</button>
+  <button class="fbtn" onclick="setFilter('failed',this)">Failed</button>
+  <button class="fbtn" onclick="setFilter('error',this)">Error</button>
+  <button class="fbtn" onclick="setFilter('skipped',this)">Skipped</button>
+  <button class="fbtn" onclick="setFilter('success',this)">2xx</button>
+  <button class="fbtn" onclick="setFilter('redirect',this)">3xx</button>
+  <button class="fbtn" onclick="setFilter('client-error',this)">4xx</button>
+  <button class="fbtn" onclick="setFilter('server-error',this)">5xx</button>
+</div>
+
+<div class="cards" id="cards">
+
+  <div class="card" id="card-0" data-outcome="passed" data-sc="success">
+    <div class="card-header" onclick="toggle('card-0')">
+      <span class="hbar hbar-success"></span>
+      <span class="method">GET</span>
+      <span class="url" title="https://jsonplaceholder.typicode.com/posts">https://jsonplaceholder.typicode.com/posts</span>
+      <span class="status-code sc-success">200 OK</span>
+      <span class="duration">265ms</span>
+      <span class="outcome-dot dot-passed" title="passed"></span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <p class="region-name"># Get Posts</p>
+      <div class="meta-row"><span class="meta-title">Fetch all posts</span><span class="meta-desc">Verify the public posts endpoint returns a list</span><span class="meta-file" title="/private/tmp/httpyac-test/sample.http">sample.http:1</span><span class="meta-ts">2026-07-27T15:01:23.894Z</span></div>
+      <div class="test-results"><span class="badge badge-pass" title="SUCCESS">status == 200</span><span class="badge badge-pass" title="SUCCESS">content-type contains application/json</span><span class="badge badge-pass" title="SUCCESS">body[0] != null</span></div>
+      <div class="panels">
+        <details>
+          <summary>Request Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">Accept</td><td>application/json</td></tr><tr><td class="hk">User-Agent</td><td>httpyac</td></tr></tbody></table>
+        </details>
+        
+        <details>
+          <summary>Response Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">date</td><td>Mon, 27 Jul 2026 15:01:24 GMT</td></tr><tr><td class="hk">content-type</td><td>application/json; charset=utf-8</td></tr><tr><td class="hk">transfer-encoding</td><td>chunked</td></tr><tr><td class="hk">connection</td><td>keep-alive</td></tr><tr><td class="hk">access-control-allow-credentials</td><td>true</td></tr><tr><td class="hk">cache-control</td><td>max-age=43200</td></tr><tr><td class="hk">content-encoding</td><td>gzip</td></tr><tr><td class="hk">etag</td><td>W/&quot;6b80-Ybsq/K6GwwqrYkAsFxqDXGC7DoM&quot;</td></tr><tr><td class="hk">expires</td><td>-1</td></tr><tr><td class="hk">nel</td><td>{&quot;report_to&quot;:&quot;heroku-nel&quot;,&quot;response_headers&quot;:[&quot;Via&quot;],&quot;max_age&quot;:3600,&quot;success_fraction&quot;:0.01,&quot;failure_fraction&quot;:0.1}</td></tr><tr><td class="hk">pragma</td><td>no-cache</td></tr><tr><td class="hk">report-to</td><td>{&quot;group&quot;:&quot;heroku-nel&quot;,&quot;endpoints&quot;:[{&quot;url&quot;:&quot;https://nel.heroku.com/reports?s=viBVrUqmEtfQD2wAvn5BW3O8rTnz0ySPz5Ykyj9Ptgk%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1783595761&quot;}],&quot;max_age&quot;:3600}</td></tr><tr><td class="hk">reporting-endpoints</td><td>heroku-nel=&quot;https://nel.heroku.com/reports?s=viBVrUqmEtfQD2wAvn5BW3O8rTnz0ySPz5Ykyj9Ptgk%3D&amp;sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&amp;ts=1783595761&quot;</td></tr><tr><td class="hk">server</td><td>cloudflare</td></tr><tr><td class="hk">vary</td><td>Origin, Accept-Encoding</td></tr><tr><td class="hk">via</td><td>2.0 heroku-router</td></tr><tr><td class="hk">x-content-type-options</td><td>nosniff</td></tr><tr><td class="hk">x-powered-by</td><td>Express</td></tr><tr><td class="hk">x-ratelimit-limit</td><td>1000</td></tr><tr><td class="hk">x-ratelimit-remaining</td><td>999</td></tr><tr><td class="hk">x-ratelimit-reset</td><td>1783595763</td></tr><tr><td class="hk">age</td><td>17663</td></tr><tr><td class="hk">cf-cache-status</td><td>HIT</td></tr><tr><td class="hk">cf-ray</td><td>a21c84ea1dc53bb6-BOM</td></tr><tr><td class="hk">alt-svc</td><td>h3=&quot;:443&quot;; ma=86400</td></tr></tbody></table>
+        </details>
+        <details>
+          <summary>Response Body</summary>
+          <pre class="body-pre"><code>[
+  {
+    &quot;userId&quot;: 1,
+    &quot;id&quot;: 1,
+    &quot;title&quot;: &quot;sunt aut facere repellat provident occaecati excepturi optio reprehenderit&quot;,
+    &quot;body&quot;: &quot;quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto&quot;
+  },
+  {
+    &quot;userId&quot;: 1,
+    &quot;id&quot;: 2,
+    &quot;title&quot;: &quot;qui est esse&quot;,
+    &quot;body&quot;: &quot;est rerum tempore vitae\nsequi sint nihil reprehenderit dolor beatae ea dolores neque\nfugiat blanditiis voluptate porro vel nihil molestiae ut reiciendis\nqui aperiam non debitis possimus qui neque nisi nulla&quot;
+  },
+  {
+    &quot;userId&quot;: 1,
+    &quot;id&quot;: 3,
+    &quot;title&quot;: &quot;ea molestias quasi exercitationem repellat qui ipsa sit aut&quot;,
+    &quot;body&quot;: &quot;et iusto sed quo iure\nvoluptatem occaecati omnis eligendi aut ad\nvoluptatem doloribus vel accusantium quis pariatur\nmolestiae porro eius odio et labore et velit aut&quot;
+  },
+  {
+    &quot;userId&quot;: 1,
+    &quot;id&quot;: 4,
+    &quot;title&quot;: &quot;eum et est occaecati&quot;,
+    &quot;body&quot;: &quot;ullam et saepe reiciendis voluptatem adipisci\nsit amet autem assumenda provident rerum culpa\nquis hic commodi nesciunt rem tenetur doloremque ipsam iure\nquis sunt voluptatem rerum illo velit&quot;
+  },
+  {
+    &quot;userId&quot;: 1,
+    &quot;id&quot;: 5,
+    &quot;title&quot;: &quot;nesciunt quas odio&quot;,
+    &quot;body&quot;: &quot;repudiandae veniam quaerat sunt sed\nalias aut fugiat sit autem sed est\nvoluptatem omnis possimus esse voluptatibus quis\nest aut tenetur dolor neque&quot;
+  },
+  {
+    &quot;userId&quot;: 1,
+    &quot;id&quot;: 6,
+    &quot;title&quot;: &quot;dolorem eum magni eos aperiam quia&quot;,
+    &quot;body&quot;: &quot;ut aspernatur corporis harum nihil quis provident sequi\nmollitia nobis aliquid molestiae\nperspiciatis et ea nemo ab reprehenderit accusantium quas\nvoluptate dolores velit et doloremque molestiae&quot;
+  },
+  {
+    &quot;userId&quot;: 1,
+    &quot;id&quot;: 7,
+    &quot;title&quot;: &quot;magnam facilis autem&quot;,
+    &quot;body&quot;: &quot;dolore placeat quibusdam ea quo vitae\nmagni quis enim qui quis quo nemo aut saepe\nquidem repellat excepturi ut quia\nsunt ut sequi eos ea sed quas&quot;
+  },
+  {
+    &quot;userId&quot;: 1,
+    &quot;id&quot;: 8,
+    &quot;title&quot;: &quot;dolorem dolore est ipsam&quot;,
+    &quot;body&quot;: &quot;dignissimos aperiam dolorem qui eum\nfacilis quibusdam animi sint suscipit qui sint possimus cum\nquaerat magni maiores excepturi\nipsam ut commodi dolor voluptatum modi aut vitae&quot;
+  },
+  {
+    &quot;userId&quot;: 1,
+    &quot;id&quot;: 9,
+    &quot;title&quot;: &quot;nesciunt iure omnis dolorem tempora et accusantium&quot;,
+    &quot;body&quot;: &quot;consectetur animi nesciunt iure dolore\nenim quia ad\nveniam autem ut quam aut nobis\net est aut quod aut provident voluptas autem voluptas&quot;
+  },
+  {
+    &quot;userId&quot;: 1,
+    &quot;id&quot;: 10,
+    &quot;title&quot;: &quot;optio molestias id quia eum&quot;,
+    &quot;body&quot;: &quot;quo et expedita modi cum officia vel magni\ndoloribus qui repudiandae\nvero nisi sit\nquos veniam quod sed accusamus veritatis error&quot;
+  },
+  {
+    &quot;userId&quot;: 2,
+    &quot;id&quot;: 11,
+    &quot;title&quot;: &quot;et ea vero quia laudantium autem&quot;,
+    &quot;body&quot;: &quot;delectus reiciendis molestiae occaecati non minima eveniet qui voluptatibus\naccusamus in eum beatae sit\nvel qui neque voluptates ut commodi qui incidunt\nut animi commodi&quot;
+  },
+  {
+    &quot;userId&quot;: 2,
+    &quot;id&quot;: 12,
+    &quot;title&quot;: &quot;in quibusdam tempore odit est dolorem&quot;,
+    &quot;body&quot;: &quot;itaque id aut magnam\npraesentium quia et ea odit et ea voluptas et\nsapiente quia nihil amet occaecati quia id voluptatem\nincidunt ea est distinctio odio&quot;
+  },
+  {
+    &quot;userId&quot;: 2,
+    &quot;id&quot;: 13,
+    &quot;title&quot;: &quot;dolorum ut in voluptas mollitia et saepe quo animi&quot;,
+    &quot;body&quot;: &quot;aut dicta possimus sint mollitia voluptas commodi quo doloremque\niste corrupti reiciendis voluptatem eius rerum\nsit cumque quod eligendi laborum minima\nperferendis recusandae assumenda consectetur porro architecto ipsum ipsam&quot;
+  },
+  {
+    &quot;userId&quot;: 2,
+    &quot;id&quot;: 14,
+    &quot;title&quot;: &quot;voluptatem eligendi optio&quot;,
+    &quot;body&quot;: &quot;fuga et accusamus dolorum perferendis illo voluptas\nnon doloremque neque facere\nad qui dolorum molestiae beatae\nsed aut voluptas totam sit illum&quot;
+  },
+  {
+    &quot;userId&quot;: 2,
+    &quot;id&quot;: 15,
+    &quot;title&quot;: &quot;eveniet quod temporibus&quot;,
+    &quot;body&quot;: &quot;reprehenderit quos placeat\nvelit minima officia dolores impedit repudiandae molestiae nam\nvoluptas recusandae quis delectus\nofficiis harum fugiat vitae&quot;
+  },
+  {
+    &quot;userId&quot;: 2,
+    &quot;id&quot;: 16,
+    &quot;title&quot;: &quot;sint suscipit perspiciatis velit dolorum rerum ipsa laboriosam odio&quot;,
+    &quot;body&quot;: &quot;suscipit nam nisi quo aperiam aut\nasperiores eos fugit maiores voluptatibus quia\nvoluptatem quis ullam qui in alias quia est\nconsequatur magni mollitia accusamus ea nisi voluptate dicta&quot;
+  },
+  {
+    &quot;userId&quot;: 2,
+    &quot;id&quot;: 17,
+    &quot;title&quot;: &quot;fugit voluptas sed molestias voluptatem provident&quot;,
+    &quot;body&quot;: &quot;eos voluptas et aut odit natus earum\naspernatur fuga molestiae ullam\ndeserunt ratione qui eos\nqui nihil ratione nemo velit ut aut id quo&quot;
+  },
+  {
+    &quot;userId&quot;: 2,
+    &quot;id&quot;: 18,
+    &quot;title&quot;: &quot;voluptate et itaque vero tempora molestiae&quot;,
+    &quot;body&quot;: &quot;eveniet quo quis\nlaborum totam consequatur non dolor\nut et est repudiandae\nest voluptatem vel debitis et magnam&quot;
+  },
+  {
+    &quot;userId&quot;: 2,
+    &quot;id&quot;: 19,
+    &quot;title&quot;: &quot;adipisci placeat illum aut reiciendis qui&quot;,
+    &quot;body&quot;: &quot;illum quis cupiditate provident sit magnam\nea sed aut omnis\nveniam maiores ullam consequatur atque\nadipisci quo iste expedita sit quos voluptas&quot;
+  },
+  {
+    &quot;userId&quot;: 2,
+    &quot;id&quot;: 20,
+    &quot;title&quot;: &quot;doloribus ad provident suscipit at&quot;,
+    &quot;body&quot;: &quot;qui consequuntur ducimus possimus quisquam amet similique\nsuscipit porro ipsam amet\neos veritatis officiis exercitationem vel fugit aut necessitatibus totam\nomnis rerum consequatur expedita quidem cumque explicabo&quot;
+  },
+  {
+    &quot;userId&quot;: 3,
+    &quot;id&quot;: 21,
+    &quot;title&quot;: &quot;asperiores ea ipsam voluptatibus modi minima quia sint&quot;,
+    &quot;body&quot;: &quot;repellat aliquid praesentium dolorem quo\nsed totam minus non itaque\nnihil labore molestiae sunt dolor eveniet hic recusandae veniam\ntempora et tenetur expedita sunt&quot;
+  },
+  {
+    &quot;userId&quot;: 3,
+    &quot;id&quot;: 22,
+    &quot;title&quot;: &quot;dolor sint quo a velit explicabo quia nam&quot;,
+    &quot;body&quot;: &quot;eos qui et ipsum ipsam suscipit aut\nsed omnis non odio\nexpedita earum mollitia molestiae aut atque rem suscipit\nnam impedit esse&quot;
+  },
+  {
+    &quot;userId&quot;: 3,
+    &quot;id&quot;: 23,
+    &quot;title&quot;: &quot;maxime id vitae nihil numquam&quot;,
+    &quot;body&quot;: &quot;veritatis unde neque eligendi\nquae quod architecto quo neque vitae\nest illo sit tempora doloremque fugit quod\net et vel beatae sequi ullam sed tenetur perspiciatis&quot;
+  },
+  {
+    &quot;userId&quot;: 3,
+    &quot;id&quot;: 24,
+    &quot;title&quot;: &quot;autem hic labore sunt dolores incidunt&quot;,
+    &quot;body&quot;: &quot;enim et ex nulla\nomnis voluptas quia qui\nvoluptatem consequatur numquam aliquam sunt\ntotam recusandae id dignissimos aut sed asperiores deserunt&quot;
+  },
+  {
+    &quot;userId&quot;: 3,
+    &quot;id&quot;: 25,
+    &quot;title&quot;: &quot;rem alias distinctio quo quis&quot;,
+    &quot;body&quot;: &quot;ullam consequatur ut\nomnis quis sit vel consequuntur\nipsa eligendi ipsum molestiae et omnis error nostrum\nmolestiae illo tempore quia et distinctio&quot;
+  },
+  {
+    &quot;userId&quot;: 3,
+    &quot;id&quot;: 26,
+    &quot;title&quot;: &quot;est et quae odit qui non&quot;,
+    &quot;body&quot;: &quot;similique esse doloribus nihil accusamus\nomnis dolorem fuga consequuntur reprehenderit fugit recusandae temporibus\nperspiciatis cum ut laudantium\nomnis aut molestiae vel vero&quot;
+  },
+  {
+    &quot;userId&quot;: 3,
+    &quot;id&quot;: 27,
+    &quot;title&quot;: &quot;quasi id et eos tenetur aut quo autem&quot;,
+    &quot;body&quot;: &quot;eum sed dolores ipsam sint possimus debitis occaecati\ndebitis qui qui et\nut placeat enim earum aut odit facilis\nconsequatur suscipit necessitatibus rerum sed inventore temporibus consequatur&quot;
+  },
+  {
+    &quot;userId&quot;: 3,
+    &quot;id&quot;: 28,
+    &quot;title&quot;: &quot;delectus ullam et corporis nulla voluptas sequi&quot;,
+    &quot;body&quot;: &quot;non et quaerat ex quae ad maiores\nmaiores recusandae totam aut blanditiis mollitia quas illo\nut voluptatibus voluptatem\nsimilique nostrum eum&quot;
+  },
+  {
+    &quot;userId&quot;: 3,
+    &quot;id&quot;: 29,
+    &quot;title&quot;: &quot;iusto eius quod necessitatibus culpa ea&quot;,
+    &quot;body&quot;: &quot;odit magnam ut saepe sed non qui\ntempora atque nihil\naccusamus illum doloribus illo dolor\neligendi repudiandae odit magni similique sed cum maiores&quot;
+  },
+  {
+    &quot;userId&quot;: 3,
+    &quot;id&quot;: 30,
+    &quot;title&quot;: &quot;a quo magni similique perferendis&quot;,
+    &quot;body&quot;: &quot;alias dolor cumque\nimpedit blanditiis non eveniet odio maxime\nblanditiis amet eius quis tempora quia autem rem\na provident perspiciatis quia&quot;
+  },
+  {
+    &quot;userId&quot;: 4,
+    &quot;id&quot;: 31,
+    &quot;title&quot;: &quot;ullam ut quidem id aut vel consequuntur&quot;,
+    &quot;body&quot;: &quot;debitis eius sed quibusdam non quis consectetur vitae\nimpedit ut qui consequatur sed aut in\nquidem sit nostrum et maiores adipisci atque\nquaerat voluptatem adipisci repudiandae&quot;
+  },
+  {
+    &quot;userId&quot;: 4,
+    &quot;id&quot;: 32,
+    &quot;title&quot;: &quot;doloremque illum aliquid sunt&quot;,
+    &quot;body&quot;: &quot;deserunt eos nobis asperiores et hic\nest debitis repellat molestiae optio\nnihil ratione ut eos beatae quibusdam distinctio maiores\nearum voluptates et aut adipisci ea maiores voluptas maxime&quot;
+  },
+  {
+    &quot;userId&quot;: 4,
+    &quot;id&quot;: 33,
+    &quot;title&quot;: &quot;qui explicabo molestiae dolorem&quot;,
+    &quot;body&quot;: &quot;rerum ut et numquam laborum odit est sit\nid qui sint in\nquasi tenetur tempore aperiam et quaerat qui in\nrerum officiis sequi cumque quod&quot;
+  },
+  {
+    &quot;userId&quot;: 4,
+    &quot;id&quot;: 34,
+    &quot;title&quot;: &quot;magnam ut rerum iure&quot;,
+    &quot;body&quot;: &quot;ea velit perferendis earum ut voluptatem voluptate itaque iusto\ntotam pariatur in\nnemo voluptatem voluptatem autem magni tempora minima in\nest distinctio qui assumenda accusamus dignissimos officia nesciunt nobis&quot;
+  },
+  {
+    &quot;userId&quot;: 4,
+    &quot;id&quot;: 35,
+    &quot;title&quot;: &quot;id nihil consequatur molestias animi provident&quot;,
+    &quot;body&quot;: &quot;nisi error delectus possimus ut eligendi vitae\nplaceat eos harum cupiditate facilis reprehenderit voluptatem beatae\nmodi ducimus quo illum voluptas eligendi\net nobis quia fugit&quot;
+  },
+  {
+    &quot;userId&quot;: 4,
+    &quot;id&quot;: 36,
+    &quot;title&quot;: &quot;fuga nam accusamus voluptas reiciendis itaque&quot;,
+    &quot;body&quot;: &quot;ad mollitia et omnis minus architecto odit\nvoluptas doloremque maxime aut non ipsa qui alias veniam\nblanditiis culpa aut quia nihil cumque facere et occaecati\nqui aspernatur quia eaque ut aperiam inventore&quot;
+  },
+  {
+    &quot;userId&quot;: 4,
+    &quot;id&quot;: 37,
+    &quot;title&quot;: &quot;provident vel ut sit ratione est&quot;,
+    &quot;body&quot;: &quot;debitis et eaque non officia sed nesciunt pariatur vel\nvoluptatem iste vero et ea\nnumquam aut expedita ipsum nulla in\nvoluptates omnis consequatur aut enim officiis in quam qui&quot;
+  },
+  {
+    &quot;userId&quot;: 4,
+    &quot;id&quot;: 38,
+    &quot;title&quot;: &quot;explicabo et eos deleniti nostrum ab id repellendus&quot;,
+    &quot;body&quot;: &quot;animi esse sit aut sit nesciunt assumenda eum voluptas\nquia voluptatibus provident quia necessitatibus ea\nrerum repudiandae quia voluptatem delectus fugit aut id quia\nratione optio eos iusto veniam iure&quot;
+  },
+  {
+    &quot;userId&quot;: 4,
+    &quot;id&quot;: 39,
+    &quot;title&quot;: &quot;eos dolorem iste accusantium est eaque quam&quot;,
+    &quot;body&quot;: &quot;corporis rerum ducimus vel eum accusantium\nmaxime aspernatur a porro possimus iste omnis\nest in deleniti asperiores fuga aut\nvoluptas sapiente vel dolore minus voluptatem incidunt ex&quot;
+  },
+  {
+    &quot;userId&quot;: 4,
+    &quot;id&quot;: 40,
+    &quot;title&quot;: &quot;enim quo cumque&quot;,
+    &quot;body&quot;: &quot;ut voluptatum aliquid illo tenetur nemo sequi quo facilis\nipsum rem optio mollitia quas\nvoluptatem eum voluptas qui\nunde omnis voluptatem iure quasi maxime voluptas nam&quot;
+  },
+  {
+    &quot;userId&quot;: 5,
+    &quot;id&quot;: 41,
+    &quot;title&quot;: &quot;non est facere&quot;,
+    &quot;body&quot;: &quot;molestias id nostrum\nexcepturi molestiae dolore omnis repellendus quaerat saepe\nconsectetur iste quaerat tenetur asperiores accusamus ex ut\nnam quidem est ducimus sunt debitis saepe&quot;
+  },
+  {
+    &quot;userId&quot;: 5,
+    &quot;id&quot;: 42,
+    &quot;title&quot;: &quot;commodi ullam sint et excepturi error explicabo praesentium voluptas&quot;,
+    &quot;body&quot;: &quot;odio fugit voluptatum ducimus earum autem est incidunt voluptatem\nodit reiciendis aliquam sunt sequi nulla dolorem\nnon facere repellendus voluptates quia\nratione harum vitae ut&quot;
+  },
+  {
+    &quot;userId&quot;: 5,
+    &quot;id&quot;: 43,
+    &quot;title&quot;: &quot;eligendi iste nostrum consequuntur adipisci praesentium sit beatae perferendis&quot;,
+    &quot;body&quot;: &quot;similique fugit est\nillum et dolorum harum et voluptate eaque quidem\nexercitationem quos nam commodi possimus cum odio nihil nulla\ndolorum exercitationem magnam ex et a et distinctio debitis&quot;
+  },
+  {
+    &quot;userId&quot;: 5,
+    &quot;id&quot;: 44,
+    &quot;title&quot;: &quot;optio dolor molestias sit&quot;,
+    &quot;body&quot;: &quot;temporibus est consectetur dolore\net libero debitis vel velit laboriosam quia\nipsum quibusdam qui itaque fuga rem aut\nea et iure quam sed maxime ut distinctio quae&quot;
+  },
+  {
+    &quot;userId&quot;: 5,
+    &quot;id&quot;: 45,
+    &quot;title&quot;: &quot;ut numquam possimus omnis eius suscipit laudantium iure&quot;,
+    &quot;body&quot;: &quot;est natus reiciendis nihil possimus aut provident\nex et dolor\nrepellat pariatur est\nnobis rerum repellendus dolorem autem&quot;
+  },
+  {
+    &quot;userId&quot;: 5,
+    &quot;id&quot;: 46,
+    &quot;title&quot;: &quot;aut quo modi neque nostrum ducimus&quot;,
+    &quot;body&quot;: &quot;voluptatem quisquam iste\nvoluptatibus natus officiis facilis dolorem\nquis quas ipsam\nvel et voluptatum in aliquid&quot;
+  },
+  {
+    &quot;userId&quot;: 5,
+    &quot;id&quot;: 47,
+    &quot;title&quot;: &quot;quibusdam cumque rem aut deserunt&quot;,
+    &quot;body&quot;: &quot;voluptatem assumenda ut qui ut cupiditate aut impedit veniam\noccaecati nemo illum voluptatem laudantium\nmolestiae beatae rerum ea iure soluta nostrum\neligendi et voluptate&quot;
+  },
+  {
+    &quot;userId&quot;: 5,
+    &quot;id&quot;: 48,
+    &quot;title&quot;: &quot;ut voluptatem illum ea doloribus itaque eos&quot;,
+    &quot;body&quot;: &quot;voluptates quo voluptatem facilis iure occaecati\nvel assumenda rerum officia et\nillum perspiciatis ab deleniti\nlaudantium repellat ad ut et autem reprehenderit&quot;
+  },
+  {
+    &quot;userId&quot;: 5,
+    &quot;id&quot;: 49,
+    &quot;title&quot;: &quot;laborum non sunt aut ut assumenda perspiciatis voluptas&quot;,
+    &quot;body&quot;: &quot;inventore ab sint\nnatus fugit id nulla sequi architecto nihil quaerat\neos tenetur in in eum veritatis non\nquibusdam officiis aspernatur cumque aut commodi aut&quot;
+  },
+  {
+    &quot;userId&quot;: 5,
+    &quot;id&quot;: 50,
+    &quot;title&quot;: &quot;repellendus qui recusandae incidunt voluptates tenetur qui omnis exercitationem&quot;,
+    &quot;body&quot;: &quot;error suscipit maxime adipisci consequuntur recusandae\nvoluptas eligendi et est et voluptates\nquia distinctio ab amet quaerat molestiae et vitae\nadipisci impedit sequi nesciunt quis consectetur&quot;
+  },
+  {
+    &quot;userId&quot;: 6,
+    &quot;id&quot;: 51,
+    &quot;title&quot;: &quot;soluta aliquam aperiam consequatur illo quis voluptas&quot;,
+    &quot;body&quot;: &quot;sunt dolores aut doloribus\ndolore doloribus voluptates tempora et\ndoloremque et quo\ncum asperiores sit consectetur dolorem&quot;
+  },
+  {
+    &quot;userId&quot;: 6,
+    &quot;id&quot;: 52,
+    &quot;title&quot;: &quot;qui enim et consequuntur quia animi quis voluptate quibusdam&quot;,
+    &quot;body&quot;: &quot;iusto est quibusdam fuga quas quaerat molestias\na enim ut sit accusamus enim\ntemporibus iusto accusantium provident architecto\nsoluta esse reprehenderit qui laborum&quot;
+  },
+  {
+    &quot;userId&quot;: 6,
+    &quot;id&quot;: 53,
+    &quot;title&quot;: &quot;ut quo aut ducimus alias&quot;,
+    &quot;body&quot;: &quot;minima harum praesentium eum rerum illo dolore\nquasi exercitationem rerum nam\nporro quis neque quo\nconsequatur minus dolor quidem veritatis sunt non explicabo similique&quot;
+  },
+  {
+    &quot;userId&quot;: 6,
+    &quot;id&quot;: 54,
+    &quot;title&quot;: &quot;sit asperiores ipsam eveniet odio non quia&quot;,
+    &quot;body&quot;: &quot;totam corporis dignissimos\nvitae dolorem ut occaecati accusamus\nex velit deserunt\net exercitationem vero incidunt corrupti mollitia&quot;
+  },
+  {
+    &quot;userId&quot;: 6,
+    &quot;id&quot;: 55,
+    &quot;title&quot;: &quot;sit vel voluptatem et non libero&quot;,
+    &quot;body&quot;: &quot;debitis excepturi ea perferendis harum libero optio\neos accusamus cum fuga ut sapiente repudiandae\net ut incidunt omnis molestiae\nnihil ut eum odit&quot;
+  },
+  {
+    &quot;userId&quot;: 6,
+    &quot;id&quot;: 56,
+    &quot;title&quot;: &quot;qui et at rerum necessitatibus&quot;,
+    &quot;body&quot;: &quot;aut est omnis dolores\nneque rerum quod ea rerum velit pariatur beatae excepturi\net provident voluptas corrupti\ncorporis harum reprehenderit dolores eligendi&quot;
+  },
+  {
+    &quot;userId&quot;: 6,
+    &quot;id&quot;: 57,
+    &quot;title&quot;: &quot;sed ab est est&quot;,
+    &quot;body&quot;: &quot;at pariatur consequuntur earum quidem\nquo est laudantium soluta voluptatem\nqui ullam et est\net cum voluptas voluptatum repellat est&quot;
+  },
+  {
+    &quot;userId&quot;: 6,
+    &quot;id&quot;: 58,
+    &quot;title&quot;: &quot;voluptatum itaque dolores nisi et quasi&quot;,
+    &quot;body&quot;: &quot;veniam voluptatum quae adipisci id\net id quia eos ad et dolorem\naliquam quo nisi sunt eos impedit error\nad similique veniam&quot;
+  },
+  {
+    &quot;userId&quot;: 6,
+    &quot;id&quot;: 59,
+    &quot;title&quot;: &quot;qui commodi dolor at maiores et quis id accusantium&quot;,
+    &quot;body&quot;: &quot;perspiciatis et quam ea autem temporibus non voluptatibus qui\nbeatae a earum officia nesciunt dolores suscipit voluptas et\nanimi doloribus cum rerum quas et magni\net hic ut ut commodi expedita sunt&quot;
+  },
+  {
+    &quot;userId&quot;: 6,
+    &quot;id&quot;: 60,
+    &quot;title&quot;: &quot;consequatur placeat omnis quisquam quia reprehenderit fugit veritatis facere&quot;,
+    &quot;body&quot;: &quot;asperiores sunt ab assumenda cumque modi velit\nqui esse omnis\nvoluptate et fuga perferendis voluptas\nillo ratione amet aut et omnis&quot;
+  },
+  {
+    &quot;userId&quot;: 7,
+    &quot;id&quot;: 61,
+    &quot;title&quot;: &quot;voluptatem doloribus consectetur est ut ducimus&quot;,
+    &quot;body&quot;: &quot;ab nemo optio odio\ndelectus tenetur corporis similique nobis repellendus rerum omnis facilis\nvero blanditiis debitis in nesciunt doloribus dicta dolores\nmagnam minus velit&quot;
+  },
+  {
+    &quot;userId&quot;: 7,
+    &quot;id&quot;: 62,
+    &quot;title&quot;: &quot;beatae enim quia vel&quot;,
+    &quot;body&quot;: &quot;enim aspernatur illo distinctio quae praesentium\nbeatae alias amet delectus qui voluptate distinctio\nodit sint accusantium autem omnis\nquo molestiae omnis ea eveniet optio&quot;
+  },
+  {
+    &quot;userId&quot;: 7,
+    &quot;id&quot;: 63,
+    &quot;title&quot;: &quot;voluptas blanditiis repellendus animi ducimus error sapiente et suscipit&quot;,
+    &quot;body&quot;: &quot;enim adipisci aspernatur nemo\nnumquam omnis facere dolorem dolor ex quis temporibus incidunt\nab delectus culpa quo reprehenderit blanditiis asperiores\naccusantium ut quam in voluptatibus voluptas ipsam dicta&quot;
+  },
+  {
+    &quot;userId&quot;: 7,
+    &quot;id&quot;: 64,
+    &quot;title&quot;: &quot;et fugit quas eum in in aperiam quod&quot;,
+    &quot;body&quot;: &quot;id velit blanditiis\neum ea voluptatem\nmolestiae sint occaecati est eos perspiciatis\nincidunt a error provident eaque aut aut qui&quot;
+  },
+  {
+    &quot;userId&quot;: 7,
+    &quot;id&quot;: 65,
+    &quot;title&quot;: &quot;consequatur id enim sunt et et&quot;,
+    &quot;body&quot;: &quot;voluptatibus ex esse\nsint explicabo est aliquid cumque adipisci fuga repellat labore\nmolestiae corrupti ex saepe at asperiores et perferendis\nnatus id esse incidunt pariatur&quot;
+  },
+  {
+    &quot;userId&quot;: 7,
+    &quot;id&quot;: 66,
+    &quot;title&quot;: &quot;repudiandae ea animi iusto&quot;,
+    &quot;body&quot;: &quot;officia veritatis tenetur vero qui itaque\nsint non ratione\nsed et ut asperiores iusto eos molestiae nostrum\nveritatis quibusdam et nemo iusto saepe&quot;
+  },
+  {
+    &quot;userId&quot;: 7,
+    &quot;id&quot;: 67,
+    &quot;title&quot;: &quot;aliquid eos sed fuga est maxime repellendus&quot;,
+    &quot;body&quot;: &quot;reprehenderit id nostrum\nvoluptas doloremque pariatur sint et accusantium quia quod aspernatur\net fugiat amet\nnon sapiente et consequatur necessitatibus molestiae&quot;
+  },
+  {
+    &quot;userId&quot;: 7,
+    &quot;id&quot;: 68,
+    &quot;title&quot;: &quot;odio quis facere architecto reiciendis optio&quot;,
+    &quot;body&quot;: &quot;magnam molestiae perferendis quisquam\nqui cum reiciendis\nquaerat animi amet hic inventore\nea quia deleniti quidem saepe porro velit&quot;
+  },
+  {
+    &quot;userId&quot;: 7,
+    &quot;id&quot;: 69,
+    &quot;title&quot;: &quot;fugiat quod pariatur odit minima&quot;,
+    &quot;body&quot;: &quot;officiis error culpa consequatur modi asperiores et\ndolorum assumenda voluptas et vel qui aut vel rerum\nvoluptatum quisquam perspiciatis quia rerum consequatur totam quas\nsequi commodi repudiandae asperiores et saepe a&quot;
+  },
+  {
+    &quot;userId&quot;: 7,
+    &quot;id&quot;: 70,
+    &quot;title&quot;: &quot;voluptatem laborum magni&quot;,
+    &quot;body&quot;: &quot;sunt repellendus quae\nest asperiores aut deleniti esse accusamus repellendus quia aut\nquia dolorem unde\neum tempora esse dolore&quot;
+  },
+  {
+    &quot;userId&quot;: 8,
+    &quot;id&quot;: 71,
+    &quot;title&quot;: &quot;et iusto veniam et illum aut fuga&quot;,
+    &quot;body&quot;: &quot;occaecati a doloribus\niste saepe consectetur placeat eum voluptate dolorem et\nqui quo quia voluptas\nrerum ut id enim velit est perferendis&quot;
+  },
+  {
+    &quot;userId&quot;: 8,
+    &quot;id&quot;: 72,
+    &quot;title&quot;: &quot;sint hic doloribus consequatur eos non id&quot;,
+    &quot;body&quot;: &quot;quam occaecati qui deleniti consectetur\nconsequatur aut facere quas exercitationem aliquam hic voluptas\nneque id sunt ut aut accusamus\nsunt consectetur expedita inventore velit&quot;
+  },
+  {
+    &quot;userId&quot;: 8,
+    &quot;id&quot;: 73,
+    &quot;title&quot;: &quot;consequuntur deleniti eos quia temporibus ab aliquid at&quot;,
+    &quot;body&quot;: &quot;voluptatem cumque tenetur consequatur expedita ipsum nemo quia explicabo\naut eum minima consequatur\ntempore cumque quae est et\net in consequuntur voluptatem voluptates aut&quot;
+  },
+  {
+    &quot;userId&quot;: 8,
+    &quot;id&quot;: 74,
+    &quot;title&quot;: &quot;enim unde ratione doloribus quas enim ut sit sapiente&quot;,
+    &quot;body&quot;: &quot;odit qui et et necessitatibus sint veniam\nmollitia amet doloremque molestiae commodi similique magnam et quam\nblanditiis est itaque\nquo et tenetur ratione occaecati molestiae tempora&quot;
+  },
+  {
+    &quot;userId&quot;: 8,
+    &quot;id&quot;: 75,
+    &quot;title&quot;: &quot;dignissimos eum dolor ut enim et delectus in&quot;,
+    &quot;body&quot;: &quot;commodi non non omnis et voluptas sit\nautem aut nobis magnam et sapiente voluptatem\net laborum repellat qui delectus facilis temporibus\nrerum amet et nemo voluptate expedita adipisci error dolorem&quot;
+  },
+  {
+    &quot;userId&quot;: 8,
+    &quot;id&quot;: 76,
+    &quot;title&quot;: &quot;doloremque officiis ad et non perferendis&quot;,
+    &quot;body&quot;: &quot;ut animi facere\ntotam iusto tempore\nmolestiae eum aut et dolorem aperiam\nquaerat recusandae totam odio&quot;
+  },
+  {
+    &quot;userId&quot;: 8,
+    &quot;id&quot;: 77,
+    &quot;title&quot;: &quot;necessitatibus quasi exercitationem odio&quot;,
+    &quot;body&quot;: &quot;modi ut in nulla repudiandae dolorum nostrum eos\naut consequatur omnis\nut incidunt est omnis iste et quam\nvoluptates sapiente aliquam asperiores nobis amet corrupti repudiandae provident&quot;
+  },
+  {
+    &quot;userId&quot;: 8,
+    &quot;id&quot;: 78,
+    &quot;title&quot;: &quot;quam voluptatibus rerum veritatis&quot;,
+    &quot;body&quot;: &quot;nobis facilis odit tempore cupiditate quia\nassumenda doloribus rerum qui ea\nillum et qui totam\naut veniam repellendus&quot;
+  },
+  {
+    &quot;userId&quot;: 8,
+    &quot;id&quot;: 79,
+    &quot;title&quot;: &quot;pariatur consequatur quia magnam autem omnis non amet&quot;,
+    &quot;body&quot;: &quot;libero accusantium et et facere incidunt sit dolorem\nnon excepturi qui quia sed laudantium\nquisquam molestiae ducimus est\nofficiis esse molestiae iste et quos&quot;
+  },
+  {
+    &quot;userId&quot;: 8,
+    &quot;id&quot;: 80,
+    &quot;title&quot;: &quot;labore in ex et explicabo corporis aut quas&quot;,
+    &quot;body&quot;: &quot;ex quod dolorem ea eum iure qui provident amet\nquia qui facere excepturi et repudiandae\nasperiores molestias provident\nminus incidunt vero fugit rerum sint sunt excepturi provident&quot;
+  },
+  {
+    &quot;userId&quot;: 9,
+    &quot;id&quot;: 81,
+    &quot;title&quot;: &quot;tempora rem veritatis voluptas quo dolores vero&quot;,
+    &quot;body&quot;: &quot;facere qui nesciunt est voluptatum voluptatem nisi\nsequi eligendi necessitatibus ea at rerum itaque\nharum non ratione velit laboriosam quis consequuntur\nex officiis minima doloremque voluptas ut aut&quot;
+  },
+  {
+    &quot;userId&quot;: 9,
+    &quot;id&quot;: 82,
+    &quot;title&quot;: &quot;laudantium voluptate suscipit sunt enim enim&quot;,
+    &quot;body&quot;: &quot;ut libero sit aut totam inventore sunt\nporro sint qui sunt molestiae\nconsequatur cupiditate qui iste ducimus adipisci\ndolor enim assumenda soluta laboriosam amet iste delectus hic&quot;
+  },
+  {
+    &quot;userId&quot;: 9,
+    &quot;id&quot;: 83,
+    &quot;title&quot;: &quot;odit et voluptates doloribus alias odio et&quot;,
+    &quot;body&quot;: &quot;est molestiae facilis quis tempora numquam nihil qui\nvoluptate sapiente consequatur est qui\nnecessitatibus autem aut ipsa aperiam modi dolore numquam\nreprehenderit eius rem quibusdam&quot;
+  },
+  {
+    &quot;userId&quot;: 9,
+    &quot;id&quot;: 84,
+    &quot;title&quot;: &quot;optio ipsam molestias necessitatibus occaecati facilis veritatis dolores aut&quot;,
+    &quot;body&quot;: &quot;sint molestiae magni a et quos\neaque et quasi\nut rerum debitis similique veniam\nrecusandae dignissimos dolor incidunt consequatur odio&quot;
+  },
+  {
+    &quot;userId&quot;: 9,
+    &quot;id&quot;: 85,
+    &quot;title&quot;: &quot;dolore veritatis porro provident adipisci blanditiis et sunt&quot;,
+    &quot;body&quot;: &quot;similique sed nisi voluptas iusto omnis\nmollitia et quo\nassumenda suscipit officia magnam sint sed tempora\nenim provident pariatur praesentium atque animi amet ratione&quot;
+  },
+  {
+    &quot;userId&quot;: 9,
+    &quot;id&quot;: 86,
+    &quot;title&quot;: &quot;placeat quia et porro iste&quot;,
+    &quot;body&quot;: &quot;quasi excepturi consequatur iste autem temporibus sed molestiae beatae\net quaerat et esse ut\nvoluptatem occaecati et vel explicabo autem\nasperiores pariatur deserunt optio&quot;
+  },
+  {
+    &quot;userId&quot;: 9,
+    &quot;id&quot;: 87,
+    &quot;title&quot;: &quot;nostrum quis quasi placeat&quot;,
+    &quot;body&quot;: &quot;eos et molestiae\nnesciunt ut a\ndolores perspiciatis repellendus repellat aliquid\nmagnam sint rem ipsum est&quot;
+  },
+  {
+    &quot;userId&quot;: 9,
+    &quot;id&quot;: 88,
+    &quot;title&quot;: &quot;sapiente omnis fugit eos&quot;,
+    &quot;body&quot;: &quot;consequatur omnis est praesentium\nducimus non iste\nneque hic deserunt\nvoluptatibus veniam cum et rerum sed&quot;
+  },
+  {
+    &quot;userId&quot;: 9,
+    &quot;id&quot;: 89,
+    &quot;title&quot;: &quot;sint soluta et vel magnam aut ut sed qui&quot;,
+    &quot;body&quot;: &quot;repellat aut aperiam totam temporibus autem et\narchitecto magnam ut\nconsequatur qui cupiditate rerum quia soluta dignissimos nihil iure\ntempore quas est&quot;
+  },
+  {
+    &quot;userId&quot;: 9,
+    &quot;id&quot;: 90,
+    &quot;title&quot;: &quot;ad iusto omnis odit dolor voluptatibus&quot;,
+    &quot;body&quot;: &quot;minus omnis soluta quia\nqui sed adipisci voluptates illum ipsam voluptatem\neligendi officia ut in\neos soluta similique molestias praesentium blanditiis&quot;
+  },
+  {
+    &quot;userId&quot;: 10,
+    &quot;id&quot;: 91,
+    &quot;title&quot;: &quot;aut amet sed&quot;,
+    &quot;body&quot;: &quot;libero voluptate eveniet aperiam sed\nsunt placeat suscipit molestias\nsimilique fugit nam natus\nexpedita consequatur consequatur dolores quia eos et placeat&quot;
+  },
+  {
+    &quot;userId&quot;: 10,
+    &quot;id&quot;: 92,
+    &quot;title&quot;: &quot;ratione ex tenetur perferendis&quot;,
+    &quot;body&quot;: &quot;aut et excepturi dicta laudantium sint rerum nihil\nlaudantium et at\na neque minima officia et similique libero et\ncommodi voluptate qui&quot;
+  },
+  {
+    &quot;userId&quot;: 10,
+    &quot;id&quot;: 93,
+    &quot;title&quot;: &quot;beatae soluta recusandae&quot;,
+    &quot;body&quot;: &quot;dolorem quibusdam ducimus consequuntur dicta aut quo laboriosam\nvoluptatem quis enim recusandae ut sed sunt\nnostrum est odit totam\nsit error sed sunt eveniet provident qui nulla&quot;
+  },
+  {
+    &quot;userId&quot;: 10,
+    &quot;id&quot;: 94,
+    &quot;title&quot;: &quot;qui qui voluptates illo iste minima&quot;,
+    &quot;body&quot;: &quot;aspernatur expedita soluta quo ab ut similique\nexpedita dolores amet\nsed temporibus distinctio magnam saepe deleniti\nomnis facilis nam ipsum natus sint similique omnis&quot;
+  },
+  {
+    &quot;userId&quot;: 10,
+    &quot;id&quot;: 95,
+    &quot;title&quot;: &quot;id minus libero illum nam ad officiis&quot;,
+    &quot;body&quot;: &quot;earum voluptatem facere provident blanditiis velit laboriosam\npariatur accusamus odio saepe\ncumque dolor qui a dicta ab doloribus consequatur omnis\ncorporis cupiditate eaque assumenda ad nesciunt&quot;
+  },
+  {
+    &quot;userId&quot;: 10,
+    &quot;id&quot;: 96,
+    &quot;title&quot;: &quot;quaerat velit veniam amet cupiditate aut numquam ut sequi&quot;,
+    &quot;body&quot;: &quot;in non odio excepturi sint eum\nlabore voluptates vitae quia qui et\ninventore itaque rerum\nveniam non exercitationem delectus aut&quot;
+  },
+  {
+    &quot;userId&quot;: 10,
+    &quot;id&quot;: 97,
+    &quot;title&quot;: &quot;quas fugiat ut perspiciatis vero provident&quot;,
+    &quot;body&quot;: &quot;eum non blanditiis soluta porro quibusdam voluptas\nvel voluptatem qui placeat dolores qui velit aut\nvel inventore aut cumque culpa explicabo aliquid at\nperspiciatis est et voluptatem dignissimos dolor itaque sit nam&quot;
+  },
+  {
+    &quot;userId&quot;: 10,
+    &quot;id&quot;: 98,
+    &quot;title&quot;: &quot;laboriosam dolor voluptates&quot;,
+    &quot;body&quot;: &quot;doloremque ex facilis sit sint culpa\nsoluta assumenda eligendi non ut eius\nsequi ducimus vel quasi\nveritatis est dolores&quot;
+  },
+  {
+    &quot;userId&quot;: 10,
+    &quot;id&quot;: 99,
+    &quot;title&quot;: &quot;temporibus sit alias delectus eligendi possimus magni&quot;,
+    &quot;body&quot;: &quot;quo deleniti praesentium dicta non quod\naut est molestias\nmolestias et officia quis nihil\nitaque dolorem quia&quot;
+  },
+  {
+    &quot;userId&quot;: 10,
+    &quot;id&quot;: 100,
+    &quot;title&quot;: &quot;at nam consequatur ea labore ea harum&quot;,
+    &quot;body&quot;: &quot;cupiditate quo est a modi nesciunt soluta\nipsa voluptas error itaque dicta in\nautem qui minus magnam et distinctio eum\naccusamus ratione error aut&quot;
+  }
+]</code></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-1" data-outcome="passed" data-sc="success">
+    <div class="card-header" onclick="toggle('card-1')">
+      <span class="hbar hbar-success"></span>
+      <span class="method">GET</span>
+      <span class="url" title="https://jsonplaceholder.typicode.com/posts/1">https://jsonplaceholder.typicode.com/posts/1</span>
+      <span class="status-code sc-success">200 OK</span>
+      <span class="duration">47ms</span>
+      <span class="outcome-dot dot-passed" title="passed"></span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <p class="region-name"># Get Single Post</p>
+      <div class="meta-row"><span class="meta-title">Fetch post by ID</span><span class="meta-desc">Verify a specific post returns correct data</span><span class="meta-file" title="/private/tmp/httpyac-test/sample.http">sample.http:13</span><span class="meta-ts">2026-07-27T15:01:24.166Z</span></div>
+      <div class="test-results"><span class="badge badge-pass" title="SUCCESS">status == 200</span><span class="badge badge-pass" title="SUCCESS">id == 1</span><span class="badge badge-pass" title="SUCCESS">title != null</span></div>
+      <div class="panels">
+        <details>
+          <summary>Request Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">Accept</td><td>application/json</td></tr><tr><td class="hk">User-Agent</td><td>httpyac</td></tr></tbody></table>
+        </details>
+        
+        <details>
+          <summary>Response Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">date</td><td>Mon, 27 Jul 2026 15:01:24 GMT</td></tr><tr><td class="hk">content-type</td><td>application/json; charset=utf-8</td></tr><tr><td class="hk">transfer-encoding</td><td>chunked</td></tr><tr><td class="hk">connection</td><td>keep-alive</td></tr><tr><td class="hk">access-control-allow-credentials</td><td>true</td></tr><tr><td class="hk">cache-control</td><td>max-age=43200</td></tr><tr><td class="hk">etag</td><td>W/&quot;124-yiKdLzqO5gfBrJFrcdJ8Yq0LGnU&quot;</td></tr><tr><td class="hk">expires</td><td>-1</td></tr><tr><td class="hk">nel</td><td>{&quot;report_to&quot;:&quot;heroku-nel&quot;,&quot;response_headers&quot;:[&quot;Via&quot;],&quot;max_age&quot;:3600,&quot;success_fraction&quot;:0.01,&quot;failure_fraction&quot;:0.1}</td></tr><tr><td class="hk">pragma</td><td>no-cache</td></tr><tr><td class="hk">report-to</td><td>{&quot;group&quot;:&quot;heroku-nel&quot;,&quot;endpoints&quot;:[{&quot;url&quot;:&quot;https://nel.heroku.com/reports?s=QglcSgAbDGSgTVeC%2FTtt2BgLQcIUu2Sziv5yPbSe4iM%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1772037115&quot;}],&quot;max_age&quot;:3600}</td></tr><tr><td class="hk">reporting-endpoints</td><td>heroku-nel=&quot;https://nel.heroku.com/reports?s=QglcSgAbDGSgTVeC%2FTtt2BgLQcIUu2Sziv5yPbSe4iM%3D&amp;sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&amp;ts=1772037115&quot;</td></tr><tr><td class="hk">server</td><td>cloudflare</td></tr><tr><td class="hk">vary</td><td>Origin, Accept-Encoding</td></tr><tr><td class="hk">via</td><td>2.0 heroku-router</td></tr><tr><td class="hk">x-content-type-options</td><td>nosniff</td></tr><tr><td class="hk">x-powered-by</td><td>Express</td></tr><tr><td class="hk">x-ratelimit-limit</td><td>1000</td></tr><tr><td class="hk">x-ratelimit-remaining</td><td>999</td></tr><tr><td class="hk">x-ratelimit-reset</td><td>1772037160</td></tr><tr><td class="hk">age</td><td>20008</td></tr><tr><td class="hk">cf-cache-status</td><td>HIT</td></tr><tr><td class="hk">content-encoding</td><td>br</td></tr><tr><td class="hk">cf-ray</td><td>a21c84ea8e243bb6-BOM</td></tr><tr><td class="hk">alt-svc</td><td>h3=&quot;:443&quot;; ma=86400</td></tr></tbody></table>
+        </details>
+        <details>
+          <summary>Response Body</summary>
+          <pre class="body-pre"><code>{
+  &quot;userId&quot;: 1,
+  &quot;id&quot;: 1,
+  &quot;title&quot;: &quot;sunt aut facere repellat provident occaecati excepturi optio reprehenderit&quot;,
+  &quot;body&quot;: &quot;quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto&quot;
+}</code></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-2" data-outcome="passed" data-sc="success">
+    <div class="card-header" onclick="toggle('card-2')">
+      <span class="hbar hbar-success"></span>
+      <span class="method">POST</span>
+      <span class="url" title="https://jsonplaceholder.typicode.com/posts">https://jsonplaceholder.typicode.com/posts</span>
+      <span class="status-code sc-success">201 Created</span>
+      <span class="duration">252ms</span>
+      <span class="outcome-dot dot-passed" title="passed"></span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <p class="region-name"># Create Post</p>
+      <div class="meta-row"><span class="meta-title">Create a new post</span><span class="meta-desc">POST request with JSON body</span><span class="meta-file" title="/private/tmp/httpyac-test/sample.http">sample.http:26</span><span class="meta-ts">2026-07-27T15:01:24.215Z</span></div>
+      <div class="test-results"><span class="badge badge-pass" title="SUCCESS">status == 201</span><span class="badge badge-pass" title="SUCCESS">id != null</span></div>
+      <div class="panels">
+        <details>
+          <summary>Request Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">Content-Type</td><td>application/json</td></tr><tr><td class="hk">Accept</td><td>*/*</td></tr><tr><td class="hk">User-Agent</td><td>httpyac</td></tr></tbody></table>
+        </details>
+        
+        <details>
+          <summary>Request Body</summary>
+          <pre class="body-pre"><code>{
+  &quot;title&quot;: &quot;httpyac-plugin-reporter-html&quot;,
+  &quot;body&quot;: &quot;A beautiful HTML reporter for httpYac&quot;,
+  &quot;userId&quot;: 1
+}</code></pre>
+        </details>
+        <details>
+          <summary>Response Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">date</td><td>Mon, 27 Jul 2026 15:01:24 GMT</td></tr><tr><td class="hk">content-type</td><td>application/json; charset=utf-8</td></tr><tr><td class="hk">content-length</td><td>124</td></tr><tr><td class="hk">connection</td><td>keep-alive</td></tr><tr><td class="hk">access-control-allow-credentials</td><td>true</td></tr><tr><td class="hk">access-control-expose-headers</td><td>Location</td></tr><tr><td class="hk">cache-control</td><td>no-cache</td></tr><tr><td class="hk">etag</td><td>W/&quot;7c-lfFuIua8l34SH5F3IkskqeHSf2M&quot;</td></tr><tr><td class="hk">expires</td><td>-1</td></tr><tr><td class="hk">location</td><td>https://jsonplaceholder.typicode.com/posts/101</td></tr><tr><td class="hk">nel</td><td>{&quot;report_to&quot;:&quot;heroku-nel&quot;,&quot;response_headers&quot;:[&quot;Via&quot;],&quot;max_age&quot;:3600,&quot;success_fraction&quot;:0.01,&quot;failure_fraction&quot;:0.1}</td></tr><tr><td class="hk">pragma</td><td>no-cache</td></tr><tr><td class="hk">report-to</td><td>{&quot;group&quot;:&quot;heroku-nel&quot;,&quot;endpoints&quot;:[{&quot;url&quot;:&quot;https://nel.heroku.com/reports?s=pMRv%2BPN0cFtRUkNkDWomdDn1Zrb36mj2RPrpWchMrzk%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1785164484&quot;}],&quot;max_age&quot;:3600}</td></tr><tr><td class="hk">reporting-endpoints</td><td>heroku-nel=&quot;https://nel.heroku.com/reports?s=pMRv%2BPN0cFtRUkNkDWomdDn1Zrb36mj2RPrpWchMrzk%3D&amp;sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&amp;ts=1785164484&quot;</td></tr><tr><td class="hk">server</td><td>cloudflare</td></tr><tr><td class="hk">vary</td><td>Origin, X-HTTP-Method-Override, Accept-Encoding</td></tr><tr><td class="hk">via</td><td>2.0 heroku-router</td></tr><tr><td class="hk">x-content-type-options</td><td>nosniff</td></tr><tr><td class="hk">x-powered-by</td><td>Express</td></tr><tr><td class="hk">x-ratelimit-limit</td><td>1000</td></tr><tr><td class="hk">x-ratelimit-remaining</td><td>999</td></tr><tr><td class="hk">x-ratelimit-reset</td><td>1785164540</td></tr><tr><td class="hk">cf-cache-status</td><td>DYNAMIC</td></tr><tr><td class="hk">cf-ray</td><td>a21c84eace503bb6-BOM</td></tr><tr><td class="hk">alt-svc</td><td>h3=&quot;:443&quot;; ma=86400</td></tr></tbody></table>
+        </details>
+        <details>
+          <summary>Response Body</summary>
+          <pre class="body-pre"><code>{
+  &quot;title&quot;: &quot;httpyac-plugin-reporter-html&quot;,
+  &quot;body&quot;: &quot;A beautiful HTML reporter for httpYac&quot;,
+  &quot;userId&quot;: 1,
+  &quot;id&quot;: 101
+}</code></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-3" data-outcome="passed" data-sc="success">
+    <div class="card-header" onclick="toggle('card-3')">
+      <span class="hbar hbar-success"></span>
+      <span class="method">GET</span>
+      <span class="url" title="https://jsonplaceholder.typicode.com/users/1">https://jsonplaceholder.typicode.com/users/1</span>
+      <span class="status-code sc-success">200 OK</span>
+      <span class="duration">54ms</span>
+      <span class="outcome-dot dot-passed" title="passed"></span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <p class="region-name"># Get User</p>
+      <div class="meta-row"><span class="meta-title">Fetch user profile</span><span class="meta-file" title="/private/tmp/httpyac-test/sample.http">sample.http:44</span><span class="meta-ts">2026-07-27T15:01:24.470Z</span></div>
+      <div class="test-results"><span class="badge badge-pass" title="SUCCESS">status == 200</span><span class="badge badge-pass" title="SUCCESS">name != null</span><span class="badge badge-pass" title="SUCCESS">email != null</span></div>
+      <div class="panels">
+        <details>
+          <summary>Request Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">Accept</td><td>application/json</td></tr><tr><td class="hk">User-Agent</td><td>httpyac</td></tr></tbody></table>
+        </details>
+        
+        <details>
+          <summary>Response Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">date</td><td>Mon, 27 Jul 2026 15:01:24 GMT</td></tr><tr><td class="hk">content-type</td><td>application/json; charset=utf-8</td></tr><tr><td class="hk">transfer-encoding</td><td>chunked</td></tr><tr><td class="hk">connection</td><td>keep-alive</td></tr><tr><td class="hk">access-control-allow-credentials</td><td>true</td></tr><tr><td class="hk">cache-control</td><td>max-age=43200</td></tr><tr><td class="hk">etag</td><td>W/&quot;1fd-+2Y3G3w049iSZtw5t1mzSnunngE&quot;</td></tr><tr><td class="hk">expires</td><td>-1</td></tr><tr><td class="hk">nel</td><td>{&quot;report_to&quot;:&quot;heroku-nel&quot;,&quot;response_headers&quot;:[&quot;Via&quot;],&quot;max_age&quot;:3600,&quot;success_fraction&quot;:0.01,&quot;failure_fraction&quot;:0.1}</td></tr><tr><td class="hk">pragma</td><td>no-cache</td></tr><tr><td class="hk">report-to</td><td>{&quot;group&quot;:&quot;heroku-nel&quot;,&quot;endpoints&quot;:[{&quot;url&quot;:&quot;https://nel.heroku.com/reports?s=2wcKHLIwyCdM5dOlIJL%2FmyCS8hVLUgdYZHIwPT%2BSwbc%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1785065571&quot;}],&quot;max_age&quot;:3600}</td></tr><tr><td class="hk">reporting-endpoints</td><td>heroku-nel=&quot;https://nel.heroku.com/reports?s=2wcKHLIwyCdM5dOlIJL%2FmyCS8hVLUgdYZHIwPT%2BSwbc%3D&amp;sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&amp;ts=1785065571&quot;</td></tr><tr><td class="hk">server</td><td>cloudflare</td></tr><tr><td class="hk">vary</td><td>Origin, Accept-Encoding</td></tr><tr><td class="hk">via</td><td>2.0 heroku-router</td></tr><tr><td class="hk">x-content-type-options</td><td>nosniff</td></tr><tr><td class="hk">x-powered-by</td><td>Express</td></tr><tr><td class="hk">x-ratelimit-limit</td><td>1000</td></tr><tr><td class="hk">x-ratelimit-remaining</td><td>999</td></tr><tr><td class="hk">x-ratelimit-reset</td><td>1785065579</td></tr><tr><td class="hk">age</td><td>12305</td></tr><tr><td class="hk">cf-cache-status</td><td>HIT</td></tr><tr><td class="hk">content-encoding</td><td>br</td></tr><tr><td class="hk">cf-ray</td><td>a21c84ec6f783bb6-BOM</td></tr><tr><td class="hk">alt-svc</td><td>h3=&quot;:443&quot;; ma=86400</td></tr></tbody></table>
+        </details>
+        <details>
+          <summary>Response Body</summary>
+          <pre class="body-pre"><code>{
+  &quot;id&quot;: 1,
+  &quot;name&quot;: &quot;Leanne Graham&quot;,
+  &quot;username&quot;: &quot;Bret&quot;,
+  &quot;email&quot;: &quot;Sincere@april.biz&quot;,
+  &quot;address&quot;: {
+    &quot;street&quot;: &quot;Kulas Light&quot;,
+    &quot;suite&quot;: &quot;Apt. 556&quot;,
+    &quot;city&quot;: &quot;Gwenborough&quot;,
+    &quot;zipcode&quot;: &quot;92998-3874&quot;,
+    &quot;geo&quot;: {
+      &quot;lat&quot;: &quot;-37.3159&quot;,
+      &quot;lng&quot;: &quot;81.1496&quot;
+    }
+  },
+  &quot;phone&quot;: &quot;1-770-736-8031 x56442&quot;,
+  &quot;website&quot;: &quot;hildegard.org&quot;,
+  &quot;company&quot;: {
+    &quot;name&quot;: &quot;Romaguera-Crona&quot;,
+    &quot;catchPhrase&quot;: &quot;Multi-layered client-server neural-net&quot;,
+    &quot;bs&quot;: &quot;harness real-time e-markets&quot;
+  }
+}</code></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-4" data-outcome="passed" data-sc="success">
+    <div class="card-header" onclick="toggle('card-4')">
+      <span class="hbar hbar-success"></span>
+      <span class="method">GET</span>
+      <span class="url" title="https://jsonplaceholder.typicode.com/posts/1/comments">https://jsonplaceholder.typicode.com/posts/1/comments</span>
+      <span class="status-code sc-success">200 OK</span>
+      <span class="duration">616ms</span>
+      <span class="outcome-dot dot-passed" title="passed"></span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <p class="region-name"># Get Comments</p>
+      <div class="meta-row"><span class="meta-title">Fetch comments for a post</span><span class="meta-file" title="/private/tmp/httpyac-test/sample.http">sample.http:56</span><span class="meta-ts">2026-07-27T15:01:24.527Z</span></div>
+      <div class="test-results"><span class="badge badge-pass" title="SUCCESS">status == 200</span><span class="badge badge-pass" title="SUCCESS">body[0] != null</span><span class="badge badge-pass" title="SUCCESS">content-type contains application/json</span></div>
+      <div class="panels">
+        <details>
+          <summary>Request Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">Accept</td><td>application/json</td></tr><tr><td class="hk">User-Agent</td><td>httpyac</td></tr></tbody></table>
+        </details>
+        
+        <details>
+          <summary>Response Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">date</td><td>Mon, 27 Jul 2026 15:01:25 GMT</td></tr><tr><td class="hk">content-type</td><td>application/json; charset=utf-8</td></tr><tr><td class="hk">transfer-encoding</td><td>chunked</td></tr><tr><td class="hk">connection</td><td>keep-alive</td></tr><tr><td class="hk">access-control-allow-credentials</td><td>true</td></tr><tr><td class="hk">cache-control</td><td>max-age=43200</td></tr><tr><td class="hk">content-encoding</td><td>gzip</td></tr><tr><td class="hk">etag</td><td>W/&quot;5e6-4bSPS5tq8F8ZDeFJULWh6upjp7U&quot;</td></tr><tr><td class="hk">expires</td><td>-1</td></tr><tr><td class="hk">nel</td><td>{&quot;report_to&quot;:&quot;heroku-nel&quot;,&quot;response_headers&quot;:[&quot;Via&quot;],&quot;max_age&quot;:3600,&quot;success_fraction&quot;:0.01,&quot;failure_fraction&quot;:0.1}</td></tr><tr><td class="hk">pragma</td><td>no-cache</td></tr><tr><td class="hk">report-to</td><td>{&quot;group&quot;:&quot;heroku-nel&quot;,&quot;endpoints&quot;:[{&quot;url&quot;:&quot;https://nel.heroku.com/reports?s=JlPOFXTMsmWAEZ5vt%2F4y8Z0YSzdUnAhad%2BdUB0gHn8g%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1785094466&quot;}],&quot;max_age&quot;:3600}</td></tr><tr><td class="hk">reporting-endpoints</td><td>heroku-nel=&quot;https://nel.heroku.com/reports?s=JlPOFXTMsmWAEZ5vt%2F4y8Z0YSzdUnAhad%2BdUB0gHn8g%3D&amp;sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&amp;ts=1785094466&quot;</td></tr><tr><td class="hk">server</td><td>cloudflare</td></tr><tr><td class="hk">vary</td><td>Origin, Accept-Encoding</td></tr><tr><td class="hk">via</td><td>2.0 heroku-router</td></tr><tr><td class="hk">x-content-type-options</td><td>nosniff</td></tr><tr><td class="hk">x-powered-by</td><td>Express</td></tr><tr><td class="hk">x-ratelimit-limit</td><td>1000</td></tr><tr><td class="hk">x-ratelimit-remaining</td><td>998</td></tr><tr><td class="hk">x-ratelimit-reset</td><td>1785094519</td></tr><tr><td class="hk">cf-cache-status</td><td>REVALIDATED</td></tr><tr><td class="hk">cf-ray</td><td>a21c84eccfaa3bb6-BOM</td></tr><tr><td class="hk">alt-svc</td><td>h3=&quot;:443&quot;; ma=86400</td></tr></tbody></table>
+        </details>
+        <details>
+          <summary>Response Body</summary>
+          <pre class="body-pre"><code>[
+  {
+    &quot;postId&quot;: 1,
+    &quot;id&quot;: 1,
+    &quot;name&quot;: &quot;id labore ex et quam laborum&quot;,
+    &quot;email&quot;: &quot;Eliseo@gardner.biz&quot;,
+    &quot;body&quot;: &quot;laudantium enim quasi est quidem magnam voluptate ipsam eos\ntempora quo necessitatibus\ndolor quam autem quasi\nreiciendis et nam sapiente accusantium&quot;
+  },
+  {
+    &quot;postId&quot;: 1,
+    &quot;id&quot;: 2,
+    &quot;name&quot;: &quot;quo vero reiciendis velit similique earum&quot;,
+    &quot;email&quot;: &quot;Jayne_Kuhic@sydney.com&quot;,
+    &quot;body&quot;: &quot;est natus enim nihil est dolore omnis voluptatem numquam\net omnis occaecati quod ullam at\nvoluptatem error expedita pariatur\nnihil sint nostrum voluptatem reiciendis et&quot;
+  },
+  {
+    &quot;postId&quot;: 1,
+    &quot;id&quot;: 3,
+    &quot;name&quot;: &quot;odio adipisci rerum aut animi&quot;,
+    &quot;email&quot;: &quot;Nikita@garfield.biz&quot;,
+    &quot;body&quot;: &quot;quia molestiae reprehenderit quasi aspernatur\naut expedita occaecati aliquam eveniet laudantium\nomnis quibusdam delectus saepe quia accusamus maiores nam est\ncum et ducimus et vero voluptates excepturi deleniti ratione&quot;
+  },
+  {
+    &quot;postId&quot;: 1,
+    &quot;id&quot;: 4,
+    &quot;name&quot;: &quot;alias odio sit&quot;,
+    &quot;email&quot;: &quot;Lew@alysha.tv&quot;,
+    &quot;body&quot;: &quot;non et atque\noccaecati deserunt quas accusantium unde odit nobis qui voluptatem\nquia voluptas consequuntur itaque dolor\net qui rerum deleniti ut occaecati&quot;
+  },
+  {
+    &quot;postId&quot;: 1,
+    &quot;id&quot;: 5,
+    &quot;name&quot;: &quot;vero eaque aliquid doloribus et culpa&quot;,
+    &quot;email&quot;: &quot;Hayden@althea.biz&quot;,
+    &quot;body&quot;: &quot;harum non quasi et ratione\ntempore iure ex voluptates in ratione\nharum architecto fugit inventore cupiditate\nvoluptates magni quo et&quot;
+  }
+]</code></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-5" data-outcome="passed" data-sc="client-error">
+    <div class="card-header" onclick="toggle('card-5')">
+      <span class="hbar hbar-client-error"></span>
+      <span class="method">GET</span>
+      <span class="url" title="https://jsonplaceholder.typicode.com/posts/99999">https://jsonplaceholder.typicode.com/posts/99999</span>
+      <span class="status-code sc-client-error">404 Not Found</span>
+      <span class="duration">47ms</span>
+      <span class="outcome-dot dot-passed" title="passed"></span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <p class="region-name"># Not Found</p>
+      <div class="meta-row"><span class="meta-title">Missing resource returns 404</span><span class="meta-desc">Intentional 404 to show error styling</span><span class="meta-file" title="/private/tmp/httpyac-test/sample.http">sample.http:68</span><span class="meta-ts">2026-07-27T15:01:25.147Z</span></div>
+      <div class="test-results"><span class="badge badge-pass" title="SUCCESS">status == 404</span></div>
+      <div class="panels">
+        <details>
+          <summary>Request Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">Accept</td><td>application/json</td></tr><tr><td class="hk">User-Agent</td><td>httpyac</td></tr></tbody></table>
+        </details>
+        
+        <details>
+          <summary>Response Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">date</td><td>Mon, 27 Jul 2026 15:01:25 GMT</td></tr><tr><td class="hk">content-type</td><td>application/json; charset=utf-8</td></tr><tr><td class="hk">content-length</td><td>2</td></tr><tr><td class="hk">connection</td><td>keep-alive</td></tr><tr><td class="hk">access-control-allow-credentials</td><td>true</td></tr><tr><td class="hk">cache-control</td><td>max-age=43200</td></tr><tr><td class="hk">etag</td><td>W/&quot;2-vyGp6PvFo4RvsFtPoIWeCReyIC8&quot;</td></tr><tr><td class="hk">expires</td><td>-1</td></tr><tr><td class="hk">nel</td><td>{&quot;report_to&quot;:&quot;heroku-nel&quot;,&quot;response_headers&quot;:[&quot;Via&quot;],&quot;max_age&quot;:3600,&quot;success_fraction&quot;:0.01,&quot;failure_fraction&quot;:0.1}</td></tr><tr><td class="hk">pragma</td><td>no-cache</td></tr><tr><td class="hk">report-to</td><td>{&quot;group&quot;:&quot;heroku-nel&quot;,&quot;endpoints&quot;:[{&quot;url&quot;:&quot;https://nel.heroku.com/reports?s=JJL35%2BEQveN2W6H6iP%2BtSsYtloxAdTig%2Fynv3%2F9wJrs%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1785146392&quot;}],&quot;max_age&quot;:3600}</td></tr><tr><td class="hk">reporting-endpoints</td><td>heroku-nel=&quot;https://nel.heroku.com/reports?s=JJL35%2BEQveN2W6H6iP%2BtSsYtloxAdTig%2Fynv3%2F9wJrs%3D&amp;sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&amp;ts=1785146392&quot;</td></tr><tr><td class="hk">server</td><td>cloudflare</td></tr><tr><td class="hk">vary</td><td>Origin, Accept-Encoding</td></tr><tr><td class="hk">via</td><td>2.0 heroku-router</td></tr><tr><td class="hk">x-content-type-options</td><td>nosniff</td></tr><tr><td class="hk">x-powered-by</td><td>Express</td></tr><tr><td class="hk">x-ratelimit-limit</td><td>1000</td></tr><tr><td class="hk">x-ratelimit-remaining</td><td>995</td></tr><tr><td class="hk">x-ratelimit-reset</td><td>1785146420</td></tr><tr><td class="hk">age</td><td>18093</td></tr><tr><td class="hk">cf-cache-status</td><td>HIT</td></tr><tr><td class="hk">cf-ray</td><td>a21c84f0aa1c3bb6-BOM</td></tr><tr><td class="hk">alt-svc</td><td>h3=&quot;:443&quot;; ma=86400</td></tr></tbody></table>
+        </details>
+        <details>
+          <summary>Response Body</summary>
+          <pre class="body-pre"><code>{}</code></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-6" data-outcome="passed" data-sc="success">
+    <div class="card-header" onclick="toggle('card-6')">
+      <span class="hbar hbar-success"></span>
+      <span class="method">PUT</span>
+      <span class="url" title="https://jsonplaceholder.typicode.com/posts/1">https://jsonplaceholder.typicode.com/posts/1</span>
+      <span class="status-code sc-success">200 OK</span>
+      <span class="duration">613ms</span>
+      <span class="outcome-dot dot-passed" title="passed"></span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <p class="region-name"># Update Post</p>
+      <div class="meta-row"><span class="meta-title">Update an existing post</span><span class="meta-file" title="/private/tmp/httpyac-test/sample.http">sample.http:79</span><span class="meta-ts">2026-07-27T15:01:25.197Z</span></div>
+      <div class="test-results"><span class="badge badge-pass" title="SUCCESS">status == 200</span><span class="badge badge-pass" title="SUCCESS">title == Updated title</span></div>
+      <div class="panels">
+        <details>
+          <summary>Request Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">Content-Type</td><td>application/json</td></tr><tr><td class="hk">Accept</td><td>*/*</td></tr><tr><td class="hk">User-Agent</td><td>httpyac</td></tr></tbody></table>
+        </details>
+        
+        <details>
+          <summary>Request Body</summary>
+          <pre class="body-pre"><code>{
+  &quot;id&quot;: 1,
+  &quot;title&quot;: &quot;Updated title&quot;,
+  &quot;body&quot;: &quot;Updated body content&quot;,
+  &quot;userId&quot;: 1
+}</code></pre>
+        </details>
+        <details>
+          <summary>Response Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">date</td><td>Mon, 27 Jul 2026 15:01:25 GMT</td></tr><tr><td class="hk">content-type</td><td>application/json; charset=utf-8</td></tr><tr><td class="hk">transfer-encoding</td><td>chunked</td></tr><tr><td class="hk">connection</td><td>keep-alive</td></tr><tr><td class="hk">access-control-allow-credentials</td><td>true</td></tr><tr><td class="hk">cache-control</td><td>no-cache</td></tr><tr><td class="hk">etag</td><td>W/&quot;5a-hs3AaEcjcx0b2asAq3K6a5eDTcM&quot;</td></tr><tr><td class="hk">expires</td><td>-1</td></tr><tr><td class="hk">nel</td><td>{&quot;report_to&quot;:&quot;heroku-nel&quot;,&quot;response_headers&quot;:[&quot;Via&quot;],&quot;max_age&quot;:3600,&quot;success_fraction&quot;:0.01,&quot;failure_fraction&quot;:0.1}</td></tr><tr><td class="hk">pragma</td><td>no-cache</td></tr><tr><td class="hk">report-to</td><td>{&quot;group&quot;:&quot;heroku-nel&quot;,&quot;endpoints&quot;:[{&quot;url&quot;:&quot;https://nel.heroku.com/reports?s=KU3FMKcrcWj3naLhkIcx6AHwsToCRNKKaUdTIniUOiA%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1785164485&quot;}],&quot;max_age&quot;:3600}</td></tr><tr><td class="hk">reporting-endpoints</td><td>heroku-nel=&quot;https://nel.heroku.com/reports?s=KU3FMKcrcWj3naLhkIcx6AHwsToCRNKKaUdTIniUOiA%3D&amp;sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&amp;ts=1785164485&quot;</td></tr><tr><td class="hk">server</td><td>cloudflare</td></tr><tr><td class="hk">vary</td><td>Origin, Accept-Encoding</td></tr><tr><td class="hk">via</td><td>2.0 heroku-router</td></tr><tr><td class="hk">x-content-type-options</td><td>nosniff</td></tr><tr><td class="hk">x-powered-by</td><td>Express</td></tr><tr><td class="hk">x-ratelimit-limit</td><td>1000</td></tr><tr><td class="hk">x-ratelimit-remaining</td><td>997</td></tr><tr><td class="hk">x-ratelimit-reset</td><td>1785164540</td></tr><tr><td class="hk">cf-cache-status</td><td>DYNAMIC</td></tr><tr><td class="hk">content-encoding</td><td>br</td></tr><tr><td class="hk">cf-ray</td><td>a21c84f0fa4c3bb6-BOM</td></tr><tr><td class="hk">alt-svc</td><td>h3=&quot;:443&quot;; ma=86400</td></tr></tbody></table>
+        </details>
+        <details>
+          <summary>Response Body</summary>
+          <pre class="body-pre"><code>{
+  &quot;id&quot;: 1,
+  &quot;title&quot;: &quot;Updated title&quot;,
+  &quot;body&quot;: &quot;Updated body content&quot;,
+  &quot;userId&quot;: 1
+}</code></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-7" data-outcome="passed" data-sc="success">
+    <div class="card-header" onclick="toggle('card-7')">
+      <span class="hbar hbar-success"></span>
+      <span class="method">DELETE</span>
+      <span class="url" title="https://jsonplaceholder.typicode.com/posts/1">https://jsonplaceholder.typicode.com/posts/1</span>
+      <span class="status-code sc-success">200 OK</span>
+      <span class="duration">250ms</span>
+      <span class="outcome-dot dot-passed" title="passed"></span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <p class="region-name"># Delete Post</p>
+      <div class="meta-row"><span class="meta-title">Delete a post</span><span class="meta-file" title="/private/tmp/httpyac-test/sample.http">sample.http:97</span><span class="meta-ts">2026-07-27T15:01:25.813Z</span></div>
+      <div class="test-results"><span class="badge badge-pass" title="SUCCESS">status == 200</span></div>
+      <div class="panels">
+        <details>
+          <summary>Request Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">Accept</td><td>*/*</td></tr><tr><td class="hk">User-Agent</td><td>httpyac</td></tr></tbody></table>
+        </details>
+        
+        <details>
+          <summary>Response Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">date</td><td>Mon, 27 Jul 2026 15:01:26 GMT</td></tr><tr><td class="hk">content-type</td><td>application/json; charset=utf-8</td></tr><tr><td class="hk">content-length</td><td>2</td></tr><tr><td class="hk">connection</td><td>keep-alive</td></tr><tr><td class="hk">access-control-allow-credentials</td><td>true</td></tr><tr><td class="hk">cache-control</td><td>no-cache</td></tr><tr><td class="hk">etag</td><td>W/&quot;2-vyGp6PvFo4RvsFtPoIWeCReyIC8&quot;</td></tr><tr><td class="hk">expires</td><td>-1</td></tr><tr><td class="hk">nel</td><td>{&quot;report_to&quot;:&quot;heroku-nel&quot;,&quot;response_headers&quot;:[&quot;Via&quot;],&quot;max_age&quot;:3600,&quot;success_fraction&quot;:0.01,&quot;failure_fraction&quot;:0.1}</td></tr><tr><td class="hk">pragma</td><td>no-cache</td></tr><tr><td class="hk">report-to</td><td>{&quot;group&quot;:&quot;heroku-nel&quot;,&quot;endpoints&quot;:[{&quot;url&quot;:&quot;https://nel.heroku.com/reports?s=KU3FMKcrcWj3naLhkIcx6AHwsToCRNKKaUdTIniUOiA%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1785164485&quot;}],&quot;max_age&quot;:3600}</td></tr><tr><td class="hk">reporting-endpoints</td><td>heroku-nel=&quot;https://nel.heroku.com/reports?s=KU3FMKcrcWj3naLhkIcx6AHwsToCRNKKaUdTIniUOiA%3D&amp;sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&amp;ts=1785164485&quot;</td></tr><tr><td class="hk">server</td><td>cloudflare</td></tr><tr><td class="hk">vary</td><td>Origin, Accept-Encoding</td></tr><tr><td class="hk">via</td><td>2.0 heroku-router</td></tr><tr><td class="hk">x-content-type-options</td><td>nosniff</td></tr><tr><td class="hk">x-powered-by</td><td>Express</td></tr><tr><td class="hk">x-ratelimit-limit</td><td>1000</td></tr><tr><td class="hk">x-ratelimit-remaining</td><td>996</td></tr><tr><td class="hk">x-ratelimit-reset</td><td>1785164540</td></tr><tr><td class="hk">cf-cache-status</td><td>DYNAMIC</td></tr><tr><td class="hk">cf-ray</td><td>a21c84f4ccce3bb6-BOM</td></tr><tr><td class="hk">alt-svc</td><td>h3=&quot;:443&quot;; ma=86400</td></tr></tbody></table>
+        </details>
+        <details>
+          <summary>Response Body</summary>
+          <pre class="body-pre"><code>{}</code></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-8" data-outcome="failed" data-sc="success">
+    <div class="card-header" onclick="toggle('card-8')">
+      <span class="hbar hbar-success"></span>
+      <span class="method">GET</span>
+      <span class="url" title="https://jsonplaceholder.typicode.com/todos/1">https://jsonplaceholder.typicode.com/todos/1</span>
+      <span class="status-code sc-success">200 OK</span>
+      <span class="duration">48ms</span>
+      <span class="outcome-dot dot-failed" title="failed"></span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <p class="region-name"># Get Todos</p>
+      <div class="meta-row"><span class="meta-title">Fetch todo items</span><span class="meta-desc">Intentional failing assertion for demo</span><span class="meta-file" title="/private/tmp/httpyac-test/sample.http">sample.http:106</span><span class="meta-ts">2026-07-27T15:01:26.067Z</span></div>
+      <div class="test-results"><span class="badge badge-pass" title="SUCCESS">status == 200</span><span class="badge badge-fail" title="FAILED [AssertionError [ERR_ASSERTION]]">completed == true — AssertionError [ERR_ASSERTION]: completed (false) == true</span></div>
+      <div class="panels">
+        <details>
+          <summary>Request Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">Accept</td><td>application/json</td></tr><tr><td class="hk">User-Agent</td><td>httpyac</td></tr></tbody></table>
+        </details>
+        
+        <details>
+          <summary>Response Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">date</td><td>Mon, 27 Jul 2026 15:01:26 GMT</td></tr><tr><td class="hk">content-type</td><td>application/json; charset=utf-8</td></tr><tr><td class="hk">transfer-encoding</td><td>chunked</td></tr><tr><td class="hk">connection</td><td>keep-alive</td></tr><tr><td class="hk">access-control-allow-credentials</td><td>true</td></tr><tr><td class="hk">cache-control</td><td>max-age=43200</td></tr><tr><td class="hk">etag</td><td>W/&quot;53-hfEnumeNh6YirfjyjaujcOPPT+s&quot;</td></tr><tr><td class="hk">expires</td><td>-1</td></tr><tr><td class="hk">nel</td><td>{&quot;report_to&quot;:&quot;heroku-nel&quot;,&quot;response_headers&quot;:[&quot;Via&quot;],&quot;max_age&quot;:3600,&quot;success_fraction&quot;:0.01,&quot;failure_fraction&quot;:0.1}</td></tr><tr><td class="hk">pragma</td><td>no-cache</td></tr><tr><td class="hk">report-to</td><td>{&quot;group&quot;:&quot;heroku-nel&quot;,&quot;endpoints&quot;:[{&quot;url&quot;:&quot;https://nel.heroku.com/reports?s=7NYDOxM2xOzUnJD7zgTV5EgTbUdTSCIcCqwJeOZbD%2BY%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1772990919&quot;}],&quot;max_age&quot;:3600}</td></tr><tr><td class="hk">reporting-endpoints</td><td>heroku-nel=&quot;https://nel.heroku.com/reports?s=7NYDOxM2xOzUnJD7zgTV5EgTbUdTSCIcCqwJeOZbD%2BY%3D&amp;sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&amp;ts=1772990919&quot;</td></tr><tr><td class="hk">server</td><td>cloudflare</td></tr><tr><td class="hk">vary</td><td>Origin, Accept-Encoding</td></tr><tr><td class="hk">via</td><td>2.0 heroku-router</td></tr><tr><td class="hk">x-content-type-options</td><td>nosniff</td></tr><tr><td class="hk">x-powered-by</td><td>Express</td></tr><tr><td class="hk">x-ratelimit-limit</td><td>1000</td></tr><tr><td class="hk">x-ratelimit-remaining</td><td>999</td></tr><tr><td class="hk">x-ratelimit-reset</td><td>1772990966</td></tr><tr><td class="hk">age</td><td>20596</td></tr><tr><td class="hk">cf-cache-status</td><td>HIT</td></tr><tr><td class="hk">content-encoding</td><td>br</td></tr><tr><td class="hk">cf-ray</td><td>a21c84f66dcb3bb6-BOM</td></tr><tr><td class="hk">alt-svc</td><td>h3=&quot;:443&quot;; ma=86400</td></tr></tbody></table>
+        </details>
+        <details>
+          <summary>Response Body</summary>
+          <pre class="body-pre"><code>{
+  &quot;userId&quot;: 1,
+  &quot;id&quot;: 1,
+  &quot;title&quot;: &quot;delectus aut autem&quot;,
+  &quot;completed&quot;: false
+}</code></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="card-9" data-outcome="passed" data-sc="success">
+    <div class="card-header" onclick="toggle('card-9')">
+      <span class="hbar hbar-success"></span>
+      <span class="method">GET</span>
+      <span class="url" title="https://httpbin.org/get">https://httpbin.org/get</span>
+      <span class="status-code sc-success">200 OK</span>
+      <span class="duration">28649ms</span>
+      <span class="outcome-dot dot-passed" title="passed"></span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <p class="region-name"># HTTP Bin Get</p>
+      <div class="meta-row"><span class="meta-title">Echo request headers</span><span class="meta-desc">httpbin mirrors back what you sent</span><span class="meta-file" title="/private/tmp/httpyac-test/sample.http">sample.http:118</span><span class="meta-ts">2026-07-27T15:01:26.119Z</span></div>
+      <div class="test-results"><span class="badge badge-pass" title="SUCCESS">status == 200</span><span class="badge badge-pass" title="SUCCESS">url != null</span></div>
+      <div class="panels">
+        <details>
+          <summary>Request Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">Accept</td><td>application/json</td></tr><tr><td class="hk">X-Custom-Header</td><td>httpyac-reporter-demo</td></tr><tr><td class="hk">User-Agent</td><td>httpyac</td></tr></tbody></table>
+        </details>
+        
+        <details>
+          <summary>Response Headers</summary>
+          <table class="header-table"><tbody><tr><td class="hk">date</td><td>Mon, 27 Jul 2026 15:01:54 GMT</td></tr><tr><td class="hk">content-type</td><td>application/json</td></tr><tr><td class="hk">content-length</td><td>358</td></tr><tr><td class="hk">connection</td><td>keep-alive</td></tr><tr><td class="hk">server</td><td>gunicorn/19.9.0</td></tr><tr><td class="hk">access-control-allow-origin</td><td>*</td></tr><tr><td class="hk">access-control-allow-credentials</td><td>true</td></tr></tbody></table>
+        </details>
+        <details>
+          <summary>Response Body</summary>
+          <pre class="body-pre"><code>{
+  &quot;args&quot;: {},
+  &quot;headers&quot;: {
+    &quot;Accept&quot;: &quot;application/json&quot;,
+    &quot;Accept-Encoding&quot;: &quot;gzip, deflate, br&quot;,
+    &quot;Host&quot;: &quot;httpbin.org&quot;,
+    &quot;User-Agent&quot;: &quot;httpyac&quot;,
+    &quot;X-Amzn-Trace-Id&quot;: &quot;Root=1-6a6772c7-0e5e167004b9423815f112cd&quot;,
+    &quot;X-Custom-Header&quot;: &quot;httpyac-reporter-demo&quot;
+  },
+  &quot;origin&quot;: &quot;130.41.204.45&quot;,
+  &quot;url&quot;: &quot;https://httpbin.org/get&quot;
+}</code></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>let currentFilter = 'all';
+
+function toggle(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('search').value.toLowerCase();
+  document.querySelectorAll('.card').forEach(card => {
+    const url      = card.querySelector('.url')?.textContent.toLowerCase() || '';
+    const name     = card.querySelector('.region-name')?.textContent.toLowerCase() || '';
+    const file     = card.querySelector('.meta-file')?.textContent.toLowerCase() || '';
+    const title    = card.querySelector('.meta-title')?.textContent.toLowerCase() || '';
+    const matchSearch = !q || url.includes(q) || name.includes(q) || file.includes(q) || title.includes(q);
+    const outcome  = card.dataset.outcome;
+    const sc       = card.dataset.sc;
+    const matchFilter =
+      currentFilter === 'all' ||
+      currentFilter === outcome ||
+      currentFilter === sc;
+    card.classList.toggle('hidden', !(matchSearch && matchFilter));
+  });
+}
+</script>
+</body>
+</html>
