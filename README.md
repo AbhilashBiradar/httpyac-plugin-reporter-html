@@ -97,6 +97,21 @@ module.exports = {
 
 ---
 
+## GitHub Actions
+
+Use the official GitHub Action to run httpYac tests and generate the report in CI — no setup needed:
+
+```yaml
+- uses: AbhilashBiradar/httpyac-html-report-action@v1
+  with:
+    files: '**/*.http'
+    title: 'My API Test Report'
+```
+
+→ [httpYac HTML Report on GitHub Marketplace](https://github.com/marketplace/actions/httpyac-html-report)
+
+---
+
 ## CI/CD Usage
 
 The report is written progressively after each request — so even if a run is interrupted, you get a partial report.
